@@ -259,8 +259,6 @@ func listMyTrainings(queries *db.Queries, userID int64) (string, tgbotapi.Inline
 		text += "🏅" + createTextOfTraining(training) + "\n"
 	}
 
-	text += text
-
 	return text, keyboard, nil
 }
 
@@ -383,7 +381,7 @@ func adminCancelTraining(bot *tgbotapi.BotAPI, queries *db.Queries, callBack *tg
 func adminDateAntTimeRequest() (string, tgbotapi.InlineKeyboardMarkup) {
 	text := "Для создания тренировки введи  с клавиатуры дату, время и место проведения тренировки как в примере:\n/t 02.01.2006 15:04, зал Ninja Way"
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("⬅ назад в меню", backMenu)}
+	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("⬅ назад в меню", adminMenu)}
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 	return text, keyboard
 }
