@@ -25,5 +25,10 @@ ORDER BY created_at;
 -- name: DeleteAppointment :exec
 DELETE FROM appointments WHERE appointment_id = $1;
 
+-- name: ListUsersForAlert :many
+SELECT user_id, place, date_and_time FROM appointments
+JOIN trainings ON appointments.training_id=trainings.training_id
+WHERE date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY);
+
 
 

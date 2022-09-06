@@ -155,3 +155,38 @@ func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUs
 	}
 	return items, nil
 }
+
+const listUsersForAlert = `-- name: ListUsersForAlert :many
+SELECT user_id, place, date_and_time FROM appointments
+JOIN trainings ON appointments.training_id=trainings.training_id
+WHERE date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY)
+`
+
+type ListUsersForAlertRow struct {
+	UserID      int64     `json:"user_id"`
+	Place       string    `json:"place"`
+	DateAndTime time.Time `json:"date_and_time"`
+}
+
+func (q *Queries) ListUsersForAlert(ctx context.Context) ([]ListUsersForAlertRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUsersForAlert)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersForAlertRow{}
+	for rows.Next() {
+		var i ListUsersForAlertRow
+		if err := rows.Scan(&i.UserID, &i.Place, &i.DateAndTime); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

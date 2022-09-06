@@ -39,20 +39,20 @@ func TestGetUser(t *testing.T) {
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
 }
 
-func TestUpdateUser(t *testing.T) {
-	user := createRandomUser(t)
+// func TestUpdateUser(t *testing.T) {
+// 	user := createRandomUser(t)
 
-	arg := UpdateUserParams{
-		UserID:   user.UserID,
-		FullName: random.RandString(),
-	}
+// 	arg := UpdateUserParams{
+// 		UserID:   user.UserID,
+// 		FullName: random.RandString(),
+// 	}
 
-	updatedUser, err := testQueries.UpdateUser(context.Background(), arg)
-	require.NoError(t, err)
-	require.NotEmpty(t, updatedUser)
-	require.Equal(t, user.UserID, updatedUser.UserID)
-	require.WithinDuration(t, user.CreatedAt, updatedUser.CreatedAt, time.Second)
-	require.NotEqual(t, user.FullName, updatedUser.FullName)
-	require.Equal(t, updatedUser.FullName, arg.FullName)
+// 	updatedUser, err := testQueries.UpdateUser(context.Background(), arg)
+// 	require.NoError(t, err)
+// 	require.NotEmpty(t, updatedUser)
+// 	require.Equal(t, user.UserID, updatedUser.UserID)
+// 	require.WithinDuration(t, user.CreatedAt, updatedUser.CreatedAt, time.Second)
+// 	require.NotEqual(t, user.FullName, updatedUser.FullName)
+// 	require.Equal(t, updatedUser.FullName, arg.FullName)
 
-}
+// }

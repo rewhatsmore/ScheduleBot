@@ -20,10 +20,10 @@ SELECT * FROM trainings
 WHERE date_and_time > now() - INTERVAL '7' DAY
 ORDER BY date_and_time;
 
--- name: UpdateTraining :one
-UPDATE trainings SET trainer = $2
-WHERE training_id = $1
-RETURNING *;
+-- -- name: UpdateTraining :one
+-- UPDATE trainings SET trainer = $2
+-- WHERE training_id = $1
+-- RETURNING *;
 
 -- name: DeleteTraining :exec
 DELETE FROM trainings WHERE training_id = $1;

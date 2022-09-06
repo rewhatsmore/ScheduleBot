@@ -1,4 +1,4 @@
-include .env
+include app.env
 
 postgres:
 	docker run --name postgres14 --network bank-network -p $(POSTGRES_PORT):$(POSTGRES_PORT) -e POSTGRES_USER=$(POSTGRES_USER) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -d postgres:14-alpine

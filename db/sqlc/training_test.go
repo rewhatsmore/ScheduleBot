@@ -46,25 +46,25 @@ func TestGetTraining(t *testing.T) {
 	require.WithinDuration(t, training1.DateAndTime, training2.DateAndTime, time.Second)
 }
 
-func TestUpdateTraining(t *testing.T) {
-	training1 := createRandomTraining(t)
+// func TestUpdateTraining(t *testing.T) {
+// 	training1 := createRandomTraining(t)
 
-	arg := UpdateTrainingParams{
-		TrainingID: training1.TrainingID,
-		Trainer:    "Саша Колесова",
-	}
+// 	arg := UpdateTrainingParams{
+// 		TrainingID: training1.TrainingID,
+// 		Trainer:    "Саша Колесова",
+// 	}
 
-	training2, err := testQueries.UpdateTraining(context.Background(), arg)
-	require.NoError(t, err)
-	require.NotEmpty(t, training2)
-	require.Equal(t, training1.TrainingID, training2.TrainingID)
-	require.Equal(t, training1.Place, training2.Place)
-	require.Equal(t, training1.Price, training2.Price)
-	require.Equal(t, training1.Type, training2.Type)
-	require.NotEqual(t, training1.Trainer, training2.Trainer)
-	require.Equal(t, arg.Trainer, training2.Trainer)
-	require.WithinDuration(t, training1.DateAndTime, training2.DateAndTime, time.Second)
-}
+// 	training2, err := testQueries.UpdateTraining(context.Background(), arg)
+// 	require.NoError(t, err)
+// 	require.NotEmpty(t, training2)
+// 	require.Equal(t, training1.TrainingID, training2.TrainingID)
+// 	require.Equal(t, training1.Place, training2.Place)
+// 	require.Equal(t, training1.Price, training2.Price)
+// 	require.Equal(t, training1.Type, training2.Type)
+// 	require.NotEqual(t, training1.Trainer, training2.Trainer)
+// 	require.Equal(t, arg.Trainer, training2.Trainer)
+// 	require.WithinDuration(t, training1.DateAndTime, training2.DateAndTime, time.Second)
+// }
 
 func TestDeleteTraining(t *testing.T) {
 	training1 := createRandomTraining(t)

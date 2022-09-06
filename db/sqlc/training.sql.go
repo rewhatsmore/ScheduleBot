@@ -39,9 +39,14 @@ func (q *Queries) CreateTraining(ctx context.Context, arg CreateTrainingParams) 
 }
 
 const deleteTraining = `-- name: DeleteTraining :exec
+
 DELETE FROM trainings WHERE training_id = $1
 `
 
+// -- name: UpdateTraining :one
+// UPDATE trainings SET trainer = $2
+// WHERE training_id = $1
+// RETURNING *;
 func (q *Queries) DeleteTraining(ctx context.Context, trainingID int64) error {
 	_, err := q.db.ExecContext(ctx, deleteTraining, trainingID)
 	return err
@@ -180,29 +185,4 @@ func (q *Queries) ListTrainingsForSend(ctx context.Context, userID int64) ([]Lis
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateTraining = `-- name: UpdateTraining :one
-UPDATE trainings SET trainer = $2
-WHERE training_id = $1
-RETURNING training_id, place, type, date_and_time, price, trainer
-`
-
-type UpdateTrainingParams struct {
-	TrainingID int64  `json:"training_id"`
-	Trainer    string `json:"trainer"`
-}
-
-func (q *Queries) UpdateTraining(ctx context.Context, arg UpdateTrainingParams) (Training, error) {
-	row := q.db.QueryRowContext(ctx, updateTraining, arg.TrainingID, arg.Trainer)
-	var i Training
-	err := row.Scan(
-		&i.TrainingID,
-		&i.Place,
-		&i.Type,
-		&i.DateAndTime,
-		&i.Price,
-		&i.Trainer,
-	)
-	return i, err
 }

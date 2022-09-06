@@ -29,6 +29,6 @@ CREATE UNIQUE INDEX ON "appointments" ("user_id", "training_id");
 
 COMMENT ON COLUMN "users"."user_id" IS 'chat_id from telegram';
 
-ALTER TABLE "appointments" ADD FOREIGN KEY ("training_id") REFERENCES "trainings" ("training_id");
+ALTER TABLE "appointments" ADD FOREIGN KEY ("training_id") REFERENCES "trainings" ("training_id") ON DELETE CASCADE;
 
 ALTER TABLE "appointments" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");

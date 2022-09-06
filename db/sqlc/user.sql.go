@@ -35,11 +35,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, userID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, userID)
+	return err
+}
+
 const getUser = `-- name: GetUser :one
+
 SELECT user_id, full_name, is_admin, created_at fROM users
 WHERE user_id = $1
 `
 
+// -- name: UpdateUser :one
+// UPDATE users SET full_name = $2
+// WHERE user_id = $1
+// RETURNING *;
 func (q *Queries) GetUser(ctx context.Context, userID int64) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, userID)
 	var i User
@@ -52,25 +66,34 @@ func (q *Queries) GetUser(ctx context.Context, userID int64) (User, error) {
 	return i, err
 }
 
-const updateUser = `-- name: UpdateUser :one
-UPDATE users SET full_name = $2
-WHERE user_id = $1
-RETURNING user_id, full_name, is_admin, created_at
+const listUsers = `-- name: ListUsers :many
+SELECT user_id, full_name, is_admin, created_at fROM users
 `
 
-type UpdateUserParams struct {
-	UserID   int64  `json:"user_id"`
-	FullName string `json:"full_name"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser, arg.UserID, arg.FullName)
-	var i User
-	err := row.Scan(
-		&i.UserID,
-		&i.FullName,
-		&i.IsAdmin,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FullName,
+			&i.IsAdmin,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
