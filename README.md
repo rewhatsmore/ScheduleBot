@@ -1,4 +1,4 @@
-#ScheduleTelegramBot
+# ScheduleTelegramBot
 
 The bot adds information about the new user to the database,
 and gives him access to an interactive list of workouts,
@@ -7,7 +7,7 @@ The bot reminds you of the upcoming workout and notifies you of the cancellation
 The bot also automatically generates a weekly schedule by copying
 it from last week.
 
-##Install (run commands in console)
+## Install (run commands in console)
 
 * `git clone`
 * `cp .env.example app.env`
