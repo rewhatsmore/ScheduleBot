@@ -15,7 +15,7 @@ const cancelApp = "ca"
 const backMenu = "bc"
 const listTrainings = "lt"
 const myTrainings = "mt"
-const trainUserslList = "tu"
+const trainUsersList = "tu"
 const backMenuText = "⬅ назад в меню"
 
 func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
@@ -35,7 +35,7 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 		return msg.UpdateMsg(bot, callBack.Message)
 	case myTrainings:
 		return listMyTrainings(bot, queries, callBack.Message)
-	case trainUserslList:
+	case trainUsersList:
 		return listTrainingUsers(bot, queries, callBack.Message)
 	case adminMenu:
 		return listAdminFunctions(bot, callBack.Message)

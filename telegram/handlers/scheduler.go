@@ -15,19 +15,24 @@ func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI) {
 	c := cron.New()
 	c.AddFunc("0 14 * * 0", func() {
 		// every Sunday at 14-00
-		createTable(queries, bot)
+		err := createSchedule(queries)
+		if err != nil {
+			return
+			//todo handle error
+		}
+		ScheduleNotification(queries, bot)
 	})
 	c.AddFunc("0 17 * * *", func() {
 		// every day at 17-00
-		alertUsers(queries, bot)
+		trainingNotification(queries, bot)
 	})
 	c.Start()
 }
 
-func alertUsers(queries *db.Queries, bot *tgbotapi.BotAPI) {
+func trainingNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	usersForAlert, err := queries.ListUsersForAlert(context.Background())
 	if err != nil {
-		log.Println(err)
+		return errNotificationDb //no urgent
 	}
 	for _, userForAlert := range usersForAlert {
 		text := fmt.Sprintf("Напоминалка! Завтра у тебя тренировка: 🥷 %s. Если у тебя изменились планы, пожалуйста, отмени свою запись.", CreateTextOfTraining(userForAlert.DateAndTime, userForAlert.Place))
@@ -45,13 +50,14 @@ func alertUsers(queries *db.Queries, bot *tgbotapi.BotAPI) {
 			log.Println(err)
 		}
 	}
+	return nil
 }
 
-func createTable(queries *db.Queries, bot *tgbotapi.BotAPI) {
+func createSchedule(queries *db.Queries) error {
+	var haveErrors error
 	trainings, err := queries.ListLastWeekTrainings(context.Background())
-	if err != nil {
-		//TODO: send error messago to Regina
-		log.Println(err)
+	if err != nil || len(trainings) == 0 {
+		return errCreateSchedule
 	}
 	for _, training := range trainings {
 		arg := db.CreateTrainingParams{
@@ -61,21 +67,22 @@ func createTable(queries *db.Queries, bot *tgbotapi.BotAPI) {
 		trainingNew, err := queries.CreateTraining(context.Background(), arg)
 		log.Println("inserted:", trainingNew.TrainingID, trainingNew.DateAndTime)
 		if err != nil {
-			//TODO: send error messago to Regina
 			log.Println(err)
+			haveErrors = errCreateSchedule
 		}
 	}
+	return haveErrors
+}
 
-	//TODO: create package `notifioncation`
+// ScheduleNotification sens schedule to user, works only if createSchedule completed successfully
+func ScheduleNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	msg, err := listTrainingsForUser(queries, 0)
 	if err != nil {
-		//TODO: send error messago to Regina
-		log.Println(err)
+		return errNotificationDb
 	}
 	users, err := queries.ListUsers(context.Background())
 	if err != nil {
-		//TODO: send error messago to Regina
-		log.Println(err)
+		return errNotificationDb
 	}
 
 	for _, user := range users {
@@ -85,4 +92,6 @@ func createTable(queries *db.Queries, bot *tgbotapi.BotAPI) {
 			log.Println(err)
 		}
 	}
+
+	return nil
 }
