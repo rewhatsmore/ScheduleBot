@@ -158,7 +158,9 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, "bc")}
+	row := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(backMenuText, "bc"),
+	}
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 
 	msg := &Msg{
@@ -167,8 +169,11 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 
 	trainings, err := queries.ListTrainings(context.Background())
 	if err != nil {
-		msg.Text = "Расписание пока недоступно, попробуй позже"
-		return msg.UpdateMsg(bot, message)
+		return err
+	}
+
+	if len(trainings) == 0 {
+		msg.Text = "Пока никто не записался на тренировки."
 	}
 
 	for _, training := range trainings {

@@ -25,5 +25,5 @@ func main() {
 
 	queries := db.New(dbConn)
 
-	telegram.StartBot(config.TelegramBotToken, queries)
+	telegram.StartBot(config, queries)
 }

@@ -1,17 +1,28 @@
 package telegram
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	db "schedule.sqlc.dev/app/db/sqlc"
 )
 
 type Msg struct {
 	UserID      int64
 	Text        string
 	ReplyMarkup interface{}
+}
+
+func HandleDeleteUser(userID int64, queries *db.Queries) error {
+	err := queries.DeleteUser(context.Background(), userID)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	return nil
 }
 
 func (msg *Msg) SendMsg(bot *tgbotapi.BotAPI) error {
@@ -39,4 +50,11 @@ func translateWeekDay(s string) string {
 	oldWD := s[:3]
 	newWD := dict[oldWD]
 	return strings.Replace(s, oldWD, newWD, 1)
+}
+
+func emptyKeyboard() tgbotapi.InlineKeyboardMarkup {
+	keyboard := tgbotapi.InlineKeyboardMarkup{}
+	row := []tgbotapi.InlineKeyboardButton{}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
+	return keyboard
 }

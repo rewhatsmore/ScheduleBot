@@ -14,6 +14,7 @@ type Config struct {
 	PostgresPassword string `mapstructure:"POSTGRES_PASSWORD"`
 	Host             string `mapstructure:"HOST"`
 	DBName           string `mapstructure:"DB_NAME"`
+	AdminID          int64  `mapstructure:"ADMIN_ID"`
 }
 
 // LoadConfig reads configuration from file or environment variables.

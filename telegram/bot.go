@@ -1,17 +1,16 @@
 package telegram
 
 import (
-	"context"
-	"database/sql"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"schedule.sqlc.dev/app/conf"
 	db "schedule.sqlc.dev/app/db/sqlc"
 	telegram "schedule.sqlc.dev/app/telegram/handlers"
 )
 
-func StartBot(token string, queries *db.Queries) {
-	bot, err := tgbotapi.NewBotAPI(token)
+func StartBot(config conf.Config, queries *db.Queries) {
+	bot, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -27,52 +26,41 @@ func StartBot(token string, queries *db.Queries) {
 
 	updates := bot.GetUpdatesChan(u)
 
-	handleUpdates(updates, bot, queries)
+	handleUpdates(updates, bot, queries, config)
 }
 
-func handleUpdates(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI, queries *db.Queries) {
+func handleUpdates(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI, queries *db.Queries, config conf.Config) {
 	for update := range updates {
 		if update.Message != nil { // If we got a message
 
 			if update.Message.IsCommand() {
 				if err := telegram.HandleCommand(update.Message, bot, queries); err != nil {
-					// handleError(update.Message.Chat.ID, err)
-					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Извини, ошибка")
-					bot.Send(msg)
-
+					msg := telegram.HandleError(update.Message.Chat.ID, config.AdminID, err)
+					msg.SendMsg(bot)
 				}
 				continue
 			}
 			if err := telegram.HandleMessage(update.Message, bot, queries); err != nil {
-				// b.handleError(update.Message.Chat.ID, err)
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Извини, ошибка")
-				bot.Send(msg)
+				msg := telegram.HandleError(update.Message.Chat.ID, config.AdminID, err)
+				msg.SendMsg(bot)
 
 			}
 		}
 
 		if update.CallbackQuery != nil {
 			if err := telegram.HandleCallback(update.CallbackQuery, bot, queries); err != nil {
-				// handleError(update.Message.Chat.ID, err)
-				msg := tgbotapi.NewMessage(update.CallbackQuery.From.ID, "Извини, ошибка")
-				bot.Send(msg)
+				msg := telegram.HandleError(update.CallbackQuery.From.ID, config.AdminID, err)
+				// TO DO: add back button
+				msg.UpdateMsg(bot, update.CallbackQuery.Message)
 				log.Println(err)
 			}
 		}
 
-		if update.MyChatMember.NewChatMember.Status == "kicked" {
-			if err := HandleDeleteUser(update.MyChatMember.From.ID, queries); err != nil {
-				// handleError(update.Message.Chat.ID, err)
-				log.Println(err)
+		if update.MyChatMember != nil && update.MyChatMember.NewChatMember.Status == "kicked" {
+			if err := telegram.HandleDeleteUser(update.MyChatMember.From.ID, queries); err != nil {
+				msg := telegram.HandleError(update.CallbackQuery.From.ID, config.AdminID, err)
+				msg.UpdateMsg(bot, update.CallbackQuery.Message)
 			}
 		}
 	}
-}
-
-func HandleDeleteUser(userID int64, queries *db.Queries) error {
-	err := queries.DeleteUser(context.Background(), userID)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-	return nil
 }
