@@ -60,12 +60,9 @@ func handleNewTraining(message *tgbotapi.Message, queries *db.Queries, bot *tgbo
 	if err != nil {
 		return err
 	}
-	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, adminMenu)}
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 
 	msg.Text = "Тренеровка успешно добавлена"
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = backMenuKeyboard()
 
 	return msg.SendMsg(bot)
 

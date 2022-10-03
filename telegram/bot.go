@@ -19,7 +19,7 @@ func StartBot(config conf.Config, queries *db.Queries) {
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	telegram.Scheduler(queries, bot)
+	telegram.Scheduler(queries, bot, config)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -35,13 +35,13 @@ func handleUpdates(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI, querie
 
 			if update.Message.IsCommand() {
 				if err := telegram.HandleCommand(update.Message, bot, queries); err != nil {
-					msg := telegram.HandleError(update.Message.Chat.ID, config.AdminID, err)
+					msg := telegram.HandleError(update.Message.Chat.ID, err)
 					msg.SendMsg(bot)
 				}
 				continue
 			}
 			if err := telegram.HandleMessage(update.Message, bot, queries); err != nil {
-				msg := telegram.HandleError(update.Message.Chat.ID, config.AdminID, err)
+				msg := telegram.HandleError(update.Message.Chat.ID, err)
 				msg.SendMsg(bot)
 
 			}
@@ -49,17 +49,16 @@ func handleUpdates(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI, querie
 
 		if update.CallbackQuery != nil {
 			if err := telegram.HandleCallback(update.CallbackQuery, bot, queries); err != nil {
-				msg := telegram.HandleError(update.CallbackQuery.From.ID, config.AdminID, err)
-				// TO DO: add back button
+				msg := telegram.HandleError(update.CallbackQuery.From.ID, err)
 				msg.UpdateMsg(bot, update.CallbackQuery.Message)
-				log.Println(err)
+
 			}
 		}
 
 		if update.MyChatMember != nil && update.MyChatMember.NewChatMember.Status == "kicked" {
 			if err := telegram.HandleDeleteUser(update.MyChatMember.From.ID, queries); err != nil {
-				msg := telegram.HandleError(update.CallbackQuery.From.ID, config.AdminID, err)
-				msg.UpdateMsg(bot, update.CallbackQuery.Message)
+				msg := telegram.HandleError(config.AdminID, err)
+				msg.SendMsg(bot)
 			}
 		}
 	}

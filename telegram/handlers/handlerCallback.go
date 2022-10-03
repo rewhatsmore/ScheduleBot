@@ -65,6 +65,7 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 	}
 	_, err = queries.CreateAppointment(context.Background(), arg)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -84,6 +85,7 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 
 	err = queries.DeleteAppointment(context.Background(), int64(appointmentId))
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -96,19 +98,14 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 
 // создание отправка списка тренировок на которые записан пользователь
 func listMyTrainings(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
-
-	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
-
 	msg := &Msg{
 		Text:        "Твои тренировки:\n\n",
-		ReplyMarkup: keyboard,
+		ReplyMarkup: backMenuKeyboard(),
 	}
 
 	userTrainings, err := queries.ListUserTrainings(context.Background(), message.Chat.ID)
 	if err != nil {
-		return msg.UpdateMsg(bot, message)
+		return err
 	}
 
 	for _, userTraining := range userTrainings {
@@ -130,8 +127,6 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 
 	trainingsForSend, err := queries.ListTrainingsForSend(context.Background(), userID)
 	if err != nil {
-		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
-		msg.ReplyMarkup = keyboard
 		return msg, err
 	}
 
@@ -140,9 +135,11 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 		text := CreateTextOfTraining(trainingForSend.DateAndTime, trainingForSend.Place)
 		data := makeApp + strconv.Itoa(int(trainingForSend.TrainingID))
 		if trainingForSend.AppointmentID != 0 {
-			text = "✅ " + text
+			text = "✅  " + text
 			data = cancelApp + fmt.Sprintf("%d", trainingForSend.AppointmentID)
 			fmt.Println(data)
+		} else {
+			text = "☐  " + text
 		}
 		btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
 		row = append(row, btn)
@@ -157,14 +154,8 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 
-	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(backMenuText, "bc"),
-	}
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
-
 	msg := &Msg{
-		ReplyMarkup: keyboard,
+		ReplyMarkup: backMenuKeyboard(),
 	}
 
 	trainings, err := queries.ListTrainings(context.Background())

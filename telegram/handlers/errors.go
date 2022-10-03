@@ -12,11 +12,10 @@ var (
 	errDeleteUser     = errors.New("Unable to delete user")
 )
 
-// TO DO: change id arguments to 1 argument and assign keybord outside
-func HandleError(userID int64, AdminID int64, err error) *Msg {
+func HandleError(userID int64, err error) *Msg {
 	msg := &Msg{
-		ReplyMarkup: emptyKeyboard(),
-		UserID:      AdminID,
+		ReplyMarkup: nil,
+		UserID:      userID,
 	}
 	switch err {
 	case errNotificationDb, errCreateSchedule:
@@ -24,7 +23,7 @@ func HandleError(userID int64, AdminID int64, err error) *Msg {
 	case errDeleteUser:
 		msg.Text = "Ошибка приложения" + fmt.Sprintf("%v %d", err, userID)
 	default:
-		msg.UserID = userID
+		msg.ReplyMarkup = backMenuKeyboard()
 		msg.Text = "Произошла ошибка. Попробуй еще раз позже."
 	}
 	return msg

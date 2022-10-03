@@ -27,7 +27,9 @@ func HandleDeleteUser(userID int64, queries *db.Queries) error {
 
 func (msg *Msg) SendMsg(bot *tgbotapi.BotAPI) error {
 	message := tgbotapi.NewMessage(msg.UserID, msg.Text)
-	message.ReplyMarkup = msg.ReplyMarkup
+	if msg.ReplyMarkup != nil {
+		message.ReplyMarkup = msg.ReplyMarkup
+	}
 	_, err := bot.Send(message)
 	return err
 }
@@ -52,9 +54,16 @@ func translateWeekDay(s string) string {
 	return strings.Replace(s, oldWD, newWD, 1)
 }
 
-func emptyKeyboard() tgbotapi.InlineKeyboardMarkup {
+//func emptyKeyboard() *tgbotapi.InlineKeyboardMarkup {
+//	keyboard := tgbotapi.InlineKeyboardMarkup{}
+//	row := []tgbotapi.InlineKeyboardButton{}
+//	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
+//	return &keyboard
+//}
+
+func backMenuKeyboard() *tgbotapi.InlineKeyboardMarkup {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	row := []tgbotapi.InlineKeyboardButton{}
+	row := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
-	return keyboard
+	return &keyboard
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"schedule.sqlc.dev/app/conf"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -11,21 +12,33 @@ import (
 	db "schedule.sqlc.dev/app/db/sqlc"
 )
 
-func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI) {
+func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI, config conf.Config) {
 	c := cron.New()
-	c.AddFunc("0 14 * * 0", func() {
+	_, err := c.AddFunc("0 14 * * 0", func() {
 		// every Sunday at 14-00
 		err := createSchedule(queries)
 		if err != nil {
+			HandleError(config.AdminID, err)
 			return
-			//todo handle error
 		}
-		ScheduleNotification(queries, bot)
+		err = ScheduleNotification(queries, bot)
+		if err != nil {
+			HandleError(config.AdminID, err)
+		}
 	})
-	c.AddFunc("0 17 * * *", func() {
+	if err != nil {
+		HandleError(config.AdminID, err)
+	}
+	_, err = c.AddFunc("0 17 * * *", func() {
 		// every day at 17-00
-		trainingNotification(queries, bot)
+		err := trainingNotification(queries, bot)
+		if err != nil {
+			HandleError(config.AdminID, err)
+		}
 	})
+	if err != nil {
+		HandleError(config.AdminID, err)
+	}
 	c.Start()
 }
 
@@ -36,13 +49,10 @@ func trainingNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	}
 	for _, userForAlert := range usersForAlert {
 		text := fmt.Sprintf("Напоминалка! Завтра у тебя тренировка: 🥷 %s. Если у тебя изменились планы, пожалуйста, отмени свою запись.", CreateTextOfTraining(userForAlert.DateAndTime, userForAlert.Place))
-		keyboard := tgbotapi.InlineKeyboardMarkup{}
-		backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
-		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
 		msg := &Msg{
 			UserID:      userForAlert.UserID,
 			Text:        text,
-			ReplyMarkup: keyboard,
+			ReplyMarkup: backMenuKeyboard(),
 		}
 
 		err := msg.SendMsg(bot)
