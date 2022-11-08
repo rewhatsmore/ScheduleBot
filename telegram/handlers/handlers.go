@@ -36,15 +36,16 @@ func (msg *Msg) SendMsg(bot *tgbotapi.BotAPI) error {
 
 func (msg *Msg) UpdateMsg(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error {
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(message.Chat.ID, message.MessageID, msg.Text, msg.ReplyMarkup.(tgbotapi.InlineKeyboardMarkup))
+	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err := bot.Send(editMsg)
 	return err
 }
 
 // CreateTextOfTraining creates text for button
-func CreateTextOfTraining(dateAndTime time.Time, place string) string {
+func CreateTextOfTraining(dateAndTime time.Time) string {
 	engTime := dateAndTime.Format("Mon 02.01 в 15:04")
 	dateTime := translateWeekDay(engTime)
-	return fmt.Sprintf("%s, %s", dateTime, place)
+	return fmt.Sprintf("%s", dateTime)
 }
 
 func translateWeekDay(s string) string {

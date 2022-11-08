@@ -42,9 +42,10 @@ func handleNewTraining(message *tgbotapi.Message, queries *db.Queries, bot *tgbo
 		UserID: message.From.ID,
 	}
 	inputData := strings.Split(message.Text, "/")
+
 	dateAndTime, err := time.Parse("02.01.2006 15:04", inputData[0])
 	if err != nil || dateAndTime.Before(time.Now()) {
-		msg.Text = "Данные введены в неверном формате. Попробуй еще раз. образец: 02.01.2006 15:04/ зал Ninja way"
+		msg.Text = insertDateAndTimeAgain
 		msg.ReplyMarkup = tgbotapi.ForceReply{
 			ForceReply: true,
 		}
@@ -56,13 +57,14 @@ func handleNewTraining(message *tgbotapi.Message, queries *db.Queries, bot *tgbo
 		Place:       place,
 		DateAndTime: dateAndTime,
 	}
+
 	_, err = queries.CreateTraining(context.Background(), arg)
 	if err != nil {
 		return err
 	}
 
 	msg.Text = "Тренеровка успешно добавлена"
-	msg.ReplyMarkup = backMenuKeyboard()
+	msg.ReplyMarkup = *backMenuKeyboard()
 
 	return msg.SendMsg(bot)
 

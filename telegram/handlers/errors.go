@@ -23,7 +23,7 @@ func HandleError(userID int64, err error) *Msg {
 	case errDeleteUser:
 		msg.Text = "Ошибка приложения" + fmt.Sprintf("%v %d", err, userID)
 	default:
-		msg.ReplyMarkup = backMenuKeyboard()
+		msg.ReplyMarkup = *backMenuKeyboard()
 		msg.Text = "Произошла ошибка. Попробуй еще раз позже."
 	}
 	return msg

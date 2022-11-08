@@ -48,7 +48,7 @@ func trainingNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 		return errNotificationDb //no urgent
 	}
 	for _, userForAlert := range usersForAlert {
-		text := fmt.Sprintf("Напоминалка! Завтра у тебя тренировка: 🥷 %s. Если у тебя изменились планы, пожалуйста, отмени свою запись.", CreateTextOfTraining(userForAlert.DateAndTime, userForAlert.Place))
+		text := fmt.Sprintf("Напоминалка! Завтра у тебя тренировка: 🥷 %s. Если у тебя изменились планы, пожалуйста, отмени свою запись.", CreateTextOfTraining(userForAlert.DateAndTime))
 		msg := &Msg{
 			UserID:      userForAlert.UserID,
 			Text:        text,

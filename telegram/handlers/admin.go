@@ -54,7 +54,7 @@ func adminListTrainings(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbo
 	for _, training := range trainings {
 
 		var row []tgbotapi.InlineKeyboardButton
-		text := CreateTextOfTraining(training.DateAndTime, training.Place)
+		text := CreateTextOfTraining(training.DateAndTime)
 		data := cancelCheck + training.DateAndTime.Format("/02.01 в 15:04/") + fmt.Sprintf("%d", training.TrainingID)
 
 		btn := tgbotapi.NewInlineKeyboardButtonData(text, data)

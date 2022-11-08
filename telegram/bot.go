@@ -40,10 +40,12 @@ func handleUpdates(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI, querie
 				}
 				continue
 			}
-			if err := telegram.HandleMessage(update.Message, bot, queries); err != nil {
-				msg := telegram.HandleError(update.Message.Chat.ID, err)
-				msg.SendMsg(bot)
+			if update.Message.ReplyToMessage != nil {
+				if err := telegram.HandleMessage(update.Message, bot, queries); err != nil {
+					msg := telegram.HandleError(update.Message.Chat.ID, err)
+					msg.SendMsg(bot)
 
+				}
 			}
 		}
 

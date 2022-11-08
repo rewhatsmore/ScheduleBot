@@ -100,7 +100,7 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 func listMyTrainings(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 	msg := &Msg{
 		Text:        "Твои тренировки:\n\n",
-		ReplyMarkup: backMenuKeyboard(),
+		ReplyMarkup: *backMenuKeyboard(),
 	}
 
 	userTrainings, err := queries.ListUserTrainings(context.Background(), message.Chat.ID)
@@ -109,7 +109,7 @@ func listMyTrainings(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotap
 	}
 
 	for _, userTraining := range userTrainings {
-		msg.Text += "🏅 " + CreateTextOfTraining(userTraining.DateAndTime, userTraining.Place) + "\n\n"
+		msg.Text += "🏅 " + CreateTextOfTraining(userTraining.DateAndTime) + "\n\n"
 	}
 
 	return msg.UpdateMsg(bot, message)
@@ -132,7 +132,7 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 
 	for _, trainingForSend := range trainingsForSend {
 		var row []tgbotapi.InlineKeyboardButton
-		text := CreateTextOfTraining(trainingForSend.DateAndTime, trainingForSend.Place)
+		text := CreateTextOfTraining(trainingForSend.DateAndTime)
 		data := makeApp + strconv.Itoa(int(trainingForSend.TrainingID))
 		if trainingForSend.AppointmentID != 0 {
 			text = "✅  " + text
@@ -155,7 +155,7 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 
 	msg := &Msg{
-		ReplyMarkup: backMenuKeyboard(),
+		ReplyMarkup: *backMenuKeyboard(),
 	}
 
 	trainings, err := queries.ListTrainings(context.Background())
@@ -164,17 +164,18 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 	}
 
 	if len(trainings) == 0 {
-		msg.Text = "Пока никто не записался на тренировки."
+		msg.Text = "Пока расписания нет, но скоро обязательно появится!"
 	}
 
 	for _, training := range trainings {
-		msg.Text += "🏅 " + CreateTextOfTraining(training.DateAndTime, training.Place) + "\n"
+		text := fmt.Sprintf("<ins>🏅 <strong>%s</strong></ins>\n", CreateTextOfTraining(training.DateAndTime))
+		msg.Text += text
 		users, err := queries.ListTrainingUsers(context.Background(), training.TrainingID)
 		if err != nil {
 			log.Panicln(err)
 		}
 		for i, user := range users {
-			msg.Text += fmt.Sprintf("%d. %s\n", i+1, user.FullName)
+			msg.Text += fmt.Sprintf("        <em>%d. %s</em>\n", i+1, user.FullName)
 		}
 		msg.Text += "\n"
 	}
