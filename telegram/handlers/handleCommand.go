@@ -38,9 +38,9 @@ func HandleCommand(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 func listFunctions(queries *db.Queries, userID int64) *Msg {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	keyboard.InlineKeyboard = [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи", listTrainings)},
+		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи ВЗРОСЛЫЕ", listTrainings)},
+		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи ДЕТИ", listChildrenTrainings)},
 		{tgbotapi.NewInlineKeyboardButtonData("Список моих тренировок", myTrainings)},
-		{tgbotapi.NewInlineKeyboardButtonData("Узнать кто уже записан?", trainUsersList)},
 	}
 
 	user, err := queries.GetUser(context.Background(), userID)

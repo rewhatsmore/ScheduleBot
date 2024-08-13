@@ -3,7 +3,6 @@ package telegram
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -45,7 +44,7 @@ func (msg *Msg) UpdateMsg(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error
 func CreateTextOfTraining(dateAndTime time.Time) string {
 	engTime := dateAndTime.Format("Mon 02.01 в 15:04")
 	dateTime := translateWeekDay(engTime)
-	return fmt.Sprintf("%s", dateTime)
+	return dateTime
 }
 
 func translateWeekDay(s string) string {

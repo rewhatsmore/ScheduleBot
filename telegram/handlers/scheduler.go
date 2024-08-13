@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"schedule.sqlc.dev/app/conf"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/robfig/cron/v3"
+	"schedule.sqlc.dev/app/conf"
 	db "schedule.sqlc.dev/app/db/sqlc"
+	"schedule.sqlc.dev/app/google"
 )
+
+// const spreadsheetId string = "108QDbpBF6HY2PvEuRnhDCQw3XSHiSq9QkyeFGTyJf10"
 
 func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI, config conf.Config) {
 	c := cron.New()
@@ -39,6 +42,16 @@ func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI, config conf.Config) {
 	if err != nil {
 		HandleError(config.AdminID, err)
 	}
+	// _, err = c.AddFunc("0 0 22 * *", func() {
+	// 	// every 22-st day of month 00-00
+	// 	err = createMonthSheet()
+	// 	if err != nil {
+	// 		HandleError(config.AdminID, err)
+	// 	}
+	// })
+	// if err != nil {
+	// 	HandleError(config.AdminID, err)
+	// }
 	c.Start()
 }
 
@@ -64,16 +77,35 @@ func trainingNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 }
 
 func createSchedule(queries *db.Queries) error {
+	fmt.Println("начало создания")
 	var haveErrors error
 	trainings, err := queries.ListLastWeekTrainings(context.Background())
 	if err != nil || len(trainings) == 0 {
+		fmt.Println(err, len(trainings))
 		return errCreateSchedule
 	}
-	for _, training := range trainings {
+
+	fmt.Println("получен список трень")
+
+	for i, training := range trainings {
 		arg := db.CreateTrainingParams{
 			Place:       training.Place,
 			DateAndTime: training.DateAndTime.Add(time.Hour * 24 * 7),
+			GroupType:   training.GroupType,
 		}
+
+		fmt.Println(i, "-я тренировка подготовлена")
+
+		columnNumber, err := google.AddTrainingsToTable(arg.DateAndTime, arg.GroupType)
+		if err != nil {
+			fmt.Println(err)
+
+			log.Println(err)
+			haveErrors = errCreateSchedule
+		}
+
+		arg.ColumnNumber = int64(columnNumber)
+
 		trainingNew, err := queries.CreateTraining(context.Background(), arg)
 		log.Println("inserted:", trainingNew.TrainingID, trainingNew.DateAndTime)
 		if err != nil {
@@ -84,7 +116,7 @@ func createSchedule(queries *db.Queries) error {
 	return haveErrors
 }
 
-// ScheduleNotification sens schedule to user, works only if createSchedule completed successfully
+// ScheduleNotification sends schedule to user, works only if createSchedule completed successfully
 func ScheduleNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	msg, err := listTrainingsForUser(queries, 0)
 	if err != nil {
@@ -105,3 +137,14 @@ func ScheduleNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 
 	return nil
 }
+
+// func createMonthSheet() error {
+// 	title := helpers.GetNextMonthString()
+
+// 	err := google.AddSheet(spreadsheetId, title)
+// 	if err != nil {
+// 		return errCreateSheet
+// 	}
+
+// 	return nil
+// }

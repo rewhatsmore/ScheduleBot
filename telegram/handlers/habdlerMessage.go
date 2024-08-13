@@ -2,11 +2,11 @@ package telegram
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	db "schedule.sqlc.dev/app/db/sqlc"
+	"schedule.sqlc.dev/app/google"
 )
 
 func HandleMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.Queries) error {
@@ -14,9 +14,9 @@ func HandleMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 	case insertFullName:
 		return handleName(message, bot, queries)
 	case insertDateAndTime:
-		return handleNewTraining(message, queries, bot)
+		return adminTypeRequest(message, bot)
 	case insertDateAndTimeAgain:
-		return handleNewTraining(message, queries, bot)
+		return adminTypeRequest(message, bot)
 	default:
 		return nil
 	}
@@ -25,11 +25,18 @@ func HandleMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 
 func handleName(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.Queries) error {
 	fullName := message.Text
-	arg := db.CreateUserParams{
-		UserID:   message.From.ID,
-		FullName: fullName,
+
+	rowNumber, err := google.AddNewUserToTable(fullName)
+	if err != nil {
+		return errAddUserToSheet
 	}
-	_, err := queries.CreateUser(context.Background(), arg)
+
+	arg := db.CreateUserParams{
+		UserID:    message.From.ID,
+		FullName:  fullName,
+		RowNumber: rowNumber,
+	}
+	_, err = queries.CreateUser(context.Background(), arg)
 	if err != nil {
 		return err
 	}
@@ -37,25 +44,26 @@ func handleName(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.Que
 	return msg.SendMsg(bot)
 }
 
-func handleNewTraining(message *tgbotapi.Message, queries *db.Queries, bot *tgbotapi.BotAPI) error {
+func HandleNewTraining(callback *tgbotapi.CallbackQuery, queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	msg := &Msg{
-		UserID: message.From.ID,
+		UserID: callback.From.ID,
 	}
-	inputData := strings.Split(message.Text, "/")
 
-	dateAndTime, err := time.Parse("02.01.2006 15:04", inputData[0])
-	if err != nil || dateAndTime.Before(time.Now()) {
-		msg.Text = insertDateAndTimeAgain
-		msg.ReplyMarkup = tgbotapi.ForceReply{
-			ForceReply: true,
-		}
-		return msg.SendMsg(bot)
-	}
-	place := inputData[1]
+	groupType := callback.Data[:2]
+	text := callback.Data[2:]
+
+	dateAndTime, err := time.Parse("02.01.2006 15:04", text)
+	_ = err
+	place := "Ninja Way"
 
 	arg := db.CreateTrainingParams{
 		Place:       place,
 		DateAndTime: dateAndTime,
+		GroupType:   db.GroupTypeEnumAdult,
+	}
+
+	if groupType == newChildTraining {
+		arg.GroupType = db.GroupTypeEnumChild
 	}
 
 	_, err = queries.CreateTraining(context.Background(), arg)
@@ -66,6 +74,6 @@ func handleNewTraining(message *tgbotapi.Message, queries *db.Queries, bot *tgbo
 	msg.Text = "Тренеровка успешно добавлена"
 	msg.ReplyMarkup = *backMenuKeyboard()
 
-	return msg.SendMsg(bot)
+	return msg.UpdateMsg(bot, callback.Message)
 
 }

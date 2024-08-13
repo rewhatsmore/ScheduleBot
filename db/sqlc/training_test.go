@@ -14,6 +14,7 @@ func createRandomTraining(t *testing.T) Training {
 	arg := CreateTrainingParams{
 		DateAndTime: random.RandTrainingTime(),
 		Place:       random.RandString(),
+		GroupType:   GroupTypeEnumAdult,
 	}
 
 	training, err := testQueries.CreateTraining(context.Background(), arg)
