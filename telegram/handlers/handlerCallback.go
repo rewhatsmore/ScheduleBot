@@ -2,9 +2,9 @@ package telegram
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -70,24 +70,29 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
 	callbackText := callBack.Data[2:]
 
-	var training db.ListTrainingsForSendRow
+	callBackData := strings.Split(callbackText, ",")
 
-	err := json.Unmarshal([]byte(callbackText), &training)
+	trainingId, err := strconv.Atoi(callBackData[0])
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
-	// trainingId, err := strconv.Atoi(callbackText[0])
-	// if err != nil {
-	// 	return err
-	// }
+	additionalChildNumber, err := strconv.Atoi(callBackData[1])
+	if err != nil {
+		return err
+	}
+
+	columnNumber, err := strconv.Atoi(callBackData[2])
+	if err != nil {
+		return err
+	}
 
 	//TODO: separate method and move below to new file AppointmentService
 	// it should response with boolean, err and does not work with TG events
 	arg := db.CreateAppointmentParams{
-		TrainingID:            training.TrainingID,
+		TrainingID:            int64(trainingId),
 		UserID:                callBack.From.ID,
-		AdditionalChildNumber: training.AdditionalChildNumber,
+		AdditionalChildNumber: int64(additionalChildNumber),
 	}
 
 	_, err = queries.CreateAppointment(context.Background(), arg)
@@ -101,18 +106,20 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 		log.Println(err)
 	}
 
-	err = google.AddAppointmentToTable(user.RowNumber, training.ColumnNumber)
+	err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber))
 	if err != nil {
 		log.Println(err)
 	}
 
-	msg, err := listTrainingsForUser(queries, callBack.From.ID)
-	if err != nil {
-		return err
-	}
+	var msg *Msg
 
 	if arg.AdditionalChildNumber != -1 {
 		msg, err = listChildrenTrainingsForUser(queries, callBack.From.ID)
+		if err != nil {
+			return err
+		}
+	} else {
+		msg, err = listTrainingsForUser(queries, callBack.From.ID)
 		if err != nil {
 			return err
 		}
@@ -126,14 +133,24 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
 	callbackText := callBack.Data[2:]
 
-	var training db.ListTrainingsForSendRow
+	callbackData := strings.Split(callbackText, ",")
 
-	err := json.Unmarshal([]byte(callbackText), &training)
+	additionalChildNumber, err := strconv.Atoi(callbackData[1])
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
-	err = queries.DeleteAppointment(context.Background(), training.AppointmentID)
+	columnNumber, err := strconv.Atoi(callbackData[2])
+	if err != nil {
+		return err
+	}
+
+	appointmentId, err := strconv.Atoi(callbackData[3])
+	if err != nil {
+		return err
+	}
+
+	err = queries.DeleteAppointment(context.Background(), int64(appointmentId))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -144,7 +161,7 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 		log.Println(err)
 	}
 
-	err = google.DeleteAppointment(user.RowNumber, training.ColumnNumber)
+	err = google.DeleteAppointment(user.RowNumber, int64(columnNumber))
 	if err != nil {
 		log.Println(err)
 	}
@@ -154,7 +171,7 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 		return err
 	}
 
-	if training.AdditionalChildNumber == -1 {
+	if additionalChildNumber == -1 {
 		return msg.UpdateMsg(bot, callBack.Message)
 	}
 
@@ -209,21 +226,24 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 	fmt.Println("Запрошены. теперь клаву делаем")
 
 	for _, trainingForSend := range trainingsForSend {
-		trString, err := json.Marshal(trainingForSend)
-		if err != nil {
-			log.Println(err)
-		}
+
+		callBackData := fmt.Sprintf("%d,%d,%d,%d", trainingForSend.TrainingID, trainingForSend.AdditionalChildNumber, trainingForSend.ColumnNumber, trainingForSend.AppointmentID)
+
+		fmt.Println("Строка: " + callBackData)
+
 		var row []tgbotapi.InlineKeyboardButton
 		text := CreateTextOfTraining(trainingForSend.DateAndTime)
-		data := makeApp + string(trString)
+		data := makeApp + callBackData
 		if trainingForSend.AppointmentID != 0 {
 			text = "✅  " + text + " (вы записаны)"
-			data = cancelApp + string(trString)
+			data = cancelApp + callBackData
 			fmt.Println(data)
 		} else {
 			text = "☐  " + text
 		}
 		btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
+		fmt.Println(text)
+		fmt.Println(data)
 		row = append(row, btn)
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 	}
@@ -264,37 +284,32 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 
 	for j, trainingForSend := range trainingsForSend {
 
-		fmt.Println(j, "-я тренировка ", trainingForSend.TrainingID)
+		fmt.Println(j, "-я тренировка, id:", trainingForSend.TrainingID)
 
-		textSlice := []string{"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " взр + реб",
+		textSlice := []string{
+			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " взр + реб",
 			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " 1 реб",
 			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " 2 реб"}
 
 		for i, text := range textSlice {
 
 			var row []tgbotapi.InlineKeyboardButton
-			fmt.Println(j, ".", i, "запись")
+			fmt.Printf("%d.%d запись\n", j, i)
 
 			data := makeApp
-
-			fmt.Println("проверка на запись")
+			fmt.Println("	номер записи:", trainingForSend.AppointmentID, "номер детей:", trainingForSend.AdditionalChildNumber, "i:", i)
 			if trainingForSend.AppointmentID != 0 && trainingForSend.AdditionalChildNumber == int64(i) {
-				fmt.Println(trainingForSend.TrainingID, "запись с галочкой")
-				text = strings.ReplaceAll(textSlice[i]+" (вы записаны)", "☐  ", "✅  ")
+				fmt.Println("запись с галочкой")
+				text = strings.ReplaceAll(text+" (вы записаны)", "☐  ", "✅  ")
 				data = cancelApp
-				fmt.Println(data)
-			}
-			fmt.Println("конец проверки")
-
-			trainingForSend.AdditionalChildNumber = int64(i)
-			trString, err := json.Marshal(trainingForSend)
-			if err != nil {
-				log.Println(err)
 			}
 
-			data += string(trString)
+			callBackData := fmt.Sprintf("%d,%d,%d,%d", trainingForSend.TrainingID, i, trainingForSend.ColumnNumber, trainingForSend.AppointmentID)
+
+			data += callBackData
 
 			btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
+			fmt.Println("text:", text, "data:", data)
 			row = append(row, btn)
 			keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 		}

@@ -113,7 +113,7 @@ func (q *Queries) ListTrainingUsers(ctx context.Context, trainingID int64) ([]Li
 }
 
 const listUserTrainings = `-- name: ListUserTrainings :many
-SELECT appointment_id, appointments.training_id, additional_child_number, user_id, place, type, date_and_time, price, trainer  FROM appointments
+SELECT appointment_id, appointments.training_id, additional_child_number, user_id, type, date_and_time, price, trainer  FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
 WHERE user_id = $1 AND date_and_time > now()
 ORDER BY date_and_time
@@ -124,7 +124,6 @@ type ListUserTrainingsRow struct {
 	TrainingID            int64     `json:"training_id"`
 	AdditionalChildNumber int64     `json:"additional_child_number"`
 	UserID                int64     `json:"user_id"`
-	Place                 string    `json:"place"`
 	Type                  string    `json:"type"`
 	DateAndTime           time.Time `json:"date_and_time"`
 	Price                 int64     `json:"price"`
@@ -145,7 +144,6 @@ func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUs
 			&i.TrainingID,
 			&i.AdditionalChildNumber,
 			&i.UserID,
-			&i.Place,
 			&i.Type,
 			&i.DateAndTime,
 			&i.Price,
@@ -165,14 +163,13 @@ func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUs
 }
 
 const listUsersForAlert = `-- name: ListUsersForAlert :many
-SELECT user_id, place, date_and_time FROM appointments
+SELECT user_id, date_and_time FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
 WHERE date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now()
 `
 
 type ListUsersForAlertRow struct {
 	UserID      int64     `json:"user_id"`
-	Place       string    `json:"place"`
 	DateAndTime time.Time `json:"date_and_time"`
 }
 
@@ -185,7 +182,7 @@ func (q *Queries) ListUsersForAlert(ctx context.Context) ([]ListUsersForAlertRow
 	items := []ListUsersForAlertRow{}
 	for rows.Next() {
 		var i ListUsersForAlertRow
-		if err := rows.Scan(&i.UserID, &i.Place, &i.DateAndTime); err != nil {
+		if err := rows.Scan(&i.UserID, &i.DateAndTime); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

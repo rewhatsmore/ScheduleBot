@@ -15,6 +15,7 @@ type Config struct {
 	Host             string `mapstructure:"HOST"`
 	DBName           string `mapstructure:"DB_NAME"`
 	AdminID          int64  `mapstructure:"ADMIN_ID"`
+	SpreadsheetID    string `mapatructure:"SPREADSHEET_ID"`
 }
 
 // LoadConfig reads configuration from file or environment variables.

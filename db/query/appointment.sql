@@ -12,7 +12,7 @@ SELECT * FROM appointments
 WHERE appointment_id = $1 LIMIT 1;
 
 -- name: ListUserTrainings :many
-SELECT appointment_id, appointments.training_id, additional_child_number, user_id, place, type, date_and_time, price, trainer  FROM appointments
+SELECT appointment_id, appointments.training_id, additional_child_number, user_id, type, date_and_time, price, trainer  FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
 WHERE user_id = $1 AND date_and_time > now()
 ORDER BY date_and_time;
@@ -27,7 +27,7 @@ ORDER BY appointments.created_at;
 DELETE FROM appointments WHERE appointment_id = $1;
 
 -- name: ListUsersForAlert :many
-SELECT user_id, place, date_and_time FROM appointments
+SELECT user_id, date_and_time FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
 WHERE date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now();
 
