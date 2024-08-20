@@ -54,10 +54,8 @@ func HandleNewTraining(callback *tgbotapi.CallbackQuery, queries *db.Queries, bo
 
 	dateAndTime, err := time.Parse("02.01.2006 15:04", text)
 	_ = err
-	place := "Ninja Way"
 
 	arg := db.CreateTrainingParams{
-		Place:       place,
 		DateAndTime: dateAndTime,
 		GroupType:   db.GroupTypeEnumAdult,
 	}

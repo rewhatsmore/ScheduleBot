@@ -17,7 +17,7 @@ import (
 
 func Scheduler(queries *db.Queries, bot *tgbotapi.BotAPI, config conf.Config) {
 	c := cron.New()
-	_, err := c.AddFunc("0 14 * * 0", func() {
+	_, err := c.AddFunc("00 15 * * 0", func() {
 		// every Sunday at 14-00
 		err := createSchedule(queries)
 		if err != nil {
@@ -89,7 +89,6 @@ func createSchedule(queries *db.Queries) error {
 
 	for i, training := range trainings {
 		arg := db.CreateTrainingParams{
-			Place:       training.Place,
 			DateAndTime: training.DateAndTime.Add(time.Hour * 24 * 7),
 			GroupType:   training.GroupType,
 		}

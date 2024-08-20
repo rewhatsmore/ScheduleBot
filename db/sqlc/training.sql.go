@@ -12,27 +12,21 @@ import (
 
 const createTraining = `-- name: CreateTraining :one
 INSERT INTO trainings (
-date_and_time, place, group_type, column_number
+date_and_time, group_type, column_number
 ) VALUES (
-$1, $2, $3, $4
+$1, $2, $3
 )
 RETURNING training_id, place, type, date_and_time, price, trainer, group_type, column_number
 `
 
 type CreateTrainingParams struct {
 	DateAndTime  time.Time     `json:"date_and_time"`
-	Place        string        `json:"place"`
 	GroupType    GroupTypeEnum `json:"group_type"`
 	ColumnNumber int64         `json:"column_number"`
 }
 
 func (q *Queries) CreateTraining(ctx context.Context, arg CreateTrainingParams) (Training, error) {
-	row := q.db.QueryRowContext(ctx, createTraining,
-		arg.DateAndTime,
-		arg.Place,
-		arg.GroupType,
-		arg.ColumnNumber,
-	)
+	row := q.db.QueryRowContext(ctx, createTraining, arg.DateAndTime, arg.GroupType, arg.ColumnNumber)
 	var i Training
 	err := row.Scan(
 		&i.TrainingID,
@@ -235,7 +229,7 @@ func (q *Queries) ListTrainings(ctx context.Context) ([]Training, error) {
 }
 
 const listTrainingsForSend = `-- name: ListTrainingsForSend :many
-SELECT trainings.training_id, place, date_and_time, column_number, COALESCE (U.appointment_id, 0) AS appointment_id, COALESCE (additional_child_number, -1) AS additional_child_number
+SELECT trainings.training_id, date_and_time, column_number, COALESCE (U.appointment_id, 0) AS appointment_id, COALESCE (additional_child_number, -1) AS additional_child_number
 FROM trainings
 LEFT JOIN (SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments WHERE user_id=$1) AS U
 ON trainings.training_id = U.training_id
@@ -250,7 +244,6 @@ type ListTrainingsForSendParams struct {
 
 type ListTrainingsForSendRow struct {
 	TrainingID            int64     `json:"training_id"`
-	Place                 string    `json:"place"`
 	DateAndTime           time.Time `json:"date_and_time"`
 	ColumnNumber          int64     `json:"column_number"`
 	AppointmentID         int64     `json:"appointment_id"`
@@ -268,7 +261,6 @@ func (q *Queries) ListTrainingsForSend(ctx context.Context, arg ListTrainingsFor
 		var i ListTrainingsForSendRow
 		if err := rows.Scan(
 			&i.TrainingID,
-			&i.Place,
 			&i.DateAndTime,
 			&i.ColumnNumber,
 			&i.AppointmentID,

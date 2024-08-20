@@ -13,7 +13,6 @@ import (
 func createRandomTraining(t *testing.T) Training {
 	arg := CreateTrainingParams{
 		DateAndTime: random.RandTrainingTime(),
-		Place:       random.RandString(),
 		GroupType:   GroupTypeEnumAdult,
 	}
 
@@ -21,7 +20,6 @@ func createRandomTraining(t *testing.T) Training {
 	require.NoError(t, err)
 	require.NotEmpty(t, training)
 	require.WithinDuration(t, arg.DateAndTime, training.DateAndTime, time.Second)
-	require.Equal(t, arg.Place, training.Place)
 	require.NotZero(t, training.Price)
 	require.NotZero(t, training.Trainer)
 	require.NotZero(t, training.TrainingID)
