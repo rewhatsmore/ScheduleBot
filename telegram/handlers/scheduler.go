@@ -87,6 +87,16 @@ func createSchedule(queries *db.Queries) error {
 
 	fmt.Println("получен список трень")
 
+	err = google.HideFilledColumns("Adult")
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = google.HideFilledColumns("Child")
+	if err != nil {
+		log.Println(err)
+	}
+
 	for i, training := range trainings {
 		arg := db.CreateTrainingParams{
 			DateAndTime: training.DateAndTime.Add(time.Hour * 24 * 7),
@@ -95,7 +105,7 @@ func createSchedule(queries *db.Queries) error {
 
 		fmt.Println(i, "-я тренировка подготовлена")
 
-		columnNumber, err := google.AddTrainingsToTable(arg.DateAndTime, arg.GroupType)
+		columnNumber, err := google.AddTrainingToTable(arg.DateAndTime, arg.GroupType)
 		if err != nil {
 			fmt.Println(err)
 

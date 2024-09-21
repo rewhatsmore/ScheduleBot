@@ -17,12 +17,16 @@ ORDER BY date_and_time;
 
 -- name: ListChildrenTrainings :many
 SELECT * FROM trainings
-WHERE date_and_time > now() AND group_type = 'child'
+WHERE date_and_time >= date_trunc('week', now()) 
+  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
+AND group_type = 'child'
 ORDER BY date_and_time;
 
 -- name: ListAdultTrainings :many
 SELECT * FROM trainings
-WHERE date_and_time > now() AND group_type = 'adult'
+WHERE date_and_time >= date_trunc('week', now()) 
+  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
+  AND group_type = 'adult'
 ORDER BY date_and_time;
 
 -- name: ListLastWeekTrainings :many
@@ -43,6 +47,6 @@ SELECT trainings.training_id, date_and_time, column_number, COALESCE (U.appointm
 FROM trainings
 LEFT JOIN (SELECT * FROM appointments WHERE user_id=$1) AS U
 ON trainings.training_id = U.training_id
-WHERE date_and_time > now() AND group_type = $2
+WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
 ORDER BY date_and_time;
 

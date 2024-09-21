@@ -78,7 +78,9 @@ func (q *Queries) GetTraining(ctx context.Context, trainingID int64) (Training, 
 
 const listAdultTrainings = `-- name: ListAdultTrainings :many
 SELECT training_id, place, type, date_and_time, price, trainer, group_type, column_number FROM trainings
-WHERE date_and_time > now() AND group_type = 'adult'
+WHERE date_and_time >= date_trunc('week', now()) 
+  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
+  AND group_type = 'adult'
 ORDER BY date_and_time
 `
 
@@ -116,7 +118,9 @@ func (q *Queries) ListAdultTrainings(ctx context.Context) ([]Training, error) {
 
 const listChildrenTrainings = `-- name: ListChildrenTrainings :many
 SELECT training_id, place, type, date_and_time, price, trainer, group_type, column_number FROM trainings
-WHERE date_and_time > now() AND group_type = 'child'
+WHERE date_and_time >= date_trunc('week', now()) 
+  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
+AND group_type = 'child'
 ORDER BY date_and_time
 `
 
@@ -233,7 +237,7 @@ SELECT trainings.training_id, date_and_time, column_number, COALESCE (U.appointm
 FROM trainings
 LEFT JOIN (SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments WHERE user_id=$1) AS U
 ON trainings.training_id = U.training_id
-WHERE date_and_time > now() AND group_type = $2
+WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
 ORDER BY date_and_time
 `
 

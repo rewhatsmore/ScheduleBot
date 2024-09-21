@@ -82,6 +82,11 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 		return err
 	}
 
+	sheetName := "Adult"
+	if additionalChildNumber != -1 {
+		sheetName = "Child"
+	}
+
 	columnNumber, err := strconv.Atoi(callBackData[2])
 	if err != nil {
 		return err
@@ -106,7 +111,7 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 		log.Println(err)
 	}
 
-	err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber))
+	err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
 	if err != nil {
 		log.Println(err)
 	}
@@ -140,6 +145,11 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 		return err
 	}
 
+	sheetName := "Adult"
+	if additionalChildNumber != -1 {
+		sheetName = "Child"
+	}
+
 	columnNumber, err := strconv.Atoi(callbackData[2])
 	if err != nil {
 		return err
@@ -161,7 +171,7 @@ func handleDeleteAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.Bot
 		log.Println(err)
 	}
 
-	err = google.DeleteAppointment(user.RowNumber, int64(columnNumber))
+	err = google.DeleteAppointment(user.RowNumber, int64(columnNumber), sheetName)
 	if err != nil {
 		log.Println(err)
 	}
@@ -226,7 +236,6 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 	fmt.Println("Запрошены. теперь клаву делаем")
 
 	for _, trainingForSend := range trainingsForSend {
-
 		callBackData := fmt.Sprintf("%d,%d,%d,%d", trainingForSend.TrainingID, trainingForSend.AdditionalChildNumber, trainingForSend.ColumnNumber, trainingForSend.AppointmentID)
 
 		fmt.Println("Строка: " + callBackData)
@@ -374,7 +383,7 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 	//дети
 	msg.Text += "<ins><strong>ДЕТИ:</strong></ins>\n\n"
 	for _, training := range childTrainings {
-		text := fmt.Sprintf("<ins>🏅 <strong>%s (дети)</strong></ins>\n", CreateTextOfTraining(training.DateAndTime))
+		text := fmt.Sprintf("<ins>🏅 <strong>%s</strong></ins>\n", CreateTextOfTraining(training.DateAndTime))
 
 		msg.Text += text
 		users, err := queries.ListTrainingUsers(context.Background(), training.TrainingID)
