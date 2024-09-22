@@ -31,6 +31,8 @@ func handleName(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.Que
 		return errAddUserToSheet
 	}
 
+	google.AddUserToChildTable(fullName, rowNumber)
+
 	arg := db.CreateUserParams{
 		UserID:    message.From.ID,
 		FullName:  fullName,

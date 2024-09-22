@@ -21,3 +21,8 @@ func GetNextMonthString() string {
 	currentMonth := time.Now().Month()
 	return nextMonthes[currentMonth]
 }
+
+func TranslateWeekDay(weekday string) string {
+	dict := map[string]string{"Mon": "пн", "Tue": "вт", "Wed": "ср", "Thu": "чт", "Fri": "пт", "Sat": "сб", "Sun": "вс"}
+	return dict[weekday]
+}

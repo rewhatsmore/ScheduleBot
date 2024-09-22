@@ -3,11 +3,11 @@ package telegram
 import (
 	"context"
 	"database/sql"
-	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	db "schedule.sqlc.dev/app/db/sqlc"
+	helpers "schedule.sqlc.dev/app/helpers"
 )
 
 type Msg struct {
@@ -41,17 +41,11 @@ func (msg *Msg) UpdateMsg(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error
 }
 
 // CreateTextOfTraining creates text for button
-func CreateTextOfTraining(dateAndTime time.Time) string {
-	engTime := dateAndTime.Format("Mon 02.01 в 15:04")
-	dateTime := translateWeekDay(engTime)
+func CreateTextOfTraining(date time.Time) string {
+	dateAndTime := date.Format("02.01 в 15:04")
+	weekday := date.Format("Mon")
+	dateTime := helpers.TranslateWeekDay(weekday) + " " + dateAndTime
 	return dateTime
-}
-
-func translateWeekDay(s string) string {
-	dict := map[string]string{"Mon": "пн", "Tue": "вт", "Wed": "ср", "Thu": "чт", "Fri": "пт", "Sat": "сб", "Sun": "вс"}
-	oldWD := s[:3]
-	newWD := dict[oldWD]
-	return strings.Replace(s, oldWD, newWD, 1)
 }
 
 //func emptyKeyboard() *tgbotapi.InlineKeyboardMarkup {
