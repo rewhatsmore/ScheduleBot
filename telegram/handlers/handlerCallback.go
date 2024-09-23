@@ -19,9 +19,12 @@ const listTrainings = "lt"
 const listChildrenTrainings = "lc"
 const myTrainings = "mt"
 const trainUsersList = "tu"
+const refreshList = "rl"
+const refreshChildrenList = "rc"
 
 // const childApointmentFlag = "ct"
 const backMenuText = "⬅ назад в меню"
+const refreshListText = "🔄 обновить список"
 
 func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
 	data := callBack.Data[:2]
@@ -37,6 +40,19 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 			return err
 		}
 		return msg.UpdateMsg(bot, callBack.Message)
+	case refreshList:
+		fmt.Println("1. сейчас будем формировать трени для юзера")
+		msg, err := listTrainingsForUser(queries, callBack.From.ID)
+		if err != nil {
+			return err
+		}
+		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
+	case refreshChildrenList:
+		msg, err := listChildrenTrainingsForUser(queries, callBack.From.ID)
+		if err != nil {
+			return err
+		}
+		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
 	case listChildrenTrainings:
 		msg, err := listChildrenTrainingsForUser(queries, callBack.From.ID)
 		if err != nil {
@@ -65,6 +81,23 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 	default:
 		return nil
 	}
+}
+
+func sendNewMessageAndDeleteOld(bot *tgbotapi.BotAPI, newMsg *Msg, oldMsg *tgbotapi.Message) error {
+	// Отправляем новое сообщение
+	err := newMsg.SendMsg(bot)
+	if err != nil {
+		return err
+	}
+
+	// Удаляем старое сообщение
+	deleteMsg := tgbotapi.NewDeleteMessage(oldMsg.Chat.ID, oldMsg.MessageID)
+	_, err = bot.Request(deleteMsg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
@@ -222,6 +255,7 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
+	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, refreshList)}
 
 	arg := db.ListTrainingsForSendParams{
 		UserID:    userID,
@@ -247,17 +281,21 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 			text = "✅  " + text + " (вы записаны)"
 			data = cancelApp + callBackData
 			fmt.Println(data)
-		} else {
+		} else if trainingForSend.AppointmentCount < 15 {
 			text = "☐  " + text
+		} else {
+			text = "🚫  " + text + " (мест нет)"
+			data = refreshList + callBackData
 		}
+
 		btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
 		fmt.Println(text)
 		fmt.Println(data)
 		row = append(row, btn)
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
 	}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, refreshRow)
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
-
 	msg.ReplyMarkup = keyboard
 
 	return msg, nil
@@ -273,6 +311,7 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
+	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, refreshChildrenList)}
 
 	arg := db.ListTrainingsForSendParams{
 		UserID:    userID,
@@ -294,11 +333,21 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 	for j, trainingForSend := range trainingsForSend {
 
 		fmt.Println(j, "-я тренировка, id:", trainingForSend.TrainingID)
+		textOfTraining := CreateTextOfTraining(trainingForSend.DateAndTime)
+		if trainingForSend.AppointmentID == 0 && trainingForSend.AppointmentCount >= 15 {
+			text := "🚫  " + textOfTraining + " (мест нет)"
+			data := refreshChildrenList
+			btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
+			fmt.Println("text:", text, "data:", data)
+			row := []tgbotapi.InlineKeyboardButton{btn}
+			keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, row)
+			continue
+		}
 
 		textSlice := []string{
-			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " взр + реб",
-			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " 1 реб",
-			"☐  " + CreateTextOfTraining(trainingForSend.DateAndTime) + " 2 реб"}
+			"☐  " + textOfTraining + " взр + реб",
+			"☐  " + textOfTraining + " 1 реб",
+			"☐  " + textOfTraining + " 2 реб"}
 
 		for i, text := range textSlice {
 
@@ -324,6 +373,7 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 		}
 
 	}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, refreshRow)
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
 
 	msg.ReplyMarkup = keyboard

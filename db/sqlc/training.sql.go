@@ -233,9 +233,15 @@ func (q *Queries) ListTrainings(ctx context.Context) ([]Training, error) {
 }
 
 const listTrainingsForSend = `-- name: ListTrainingsForSend :many
-SELECT trainings.training_id, date_and_time, column_number, COALESCE (U.appointment_id, 0) AS appointment_id, COALESCE (additional_child_number, -1) AS additional_child_number
+SELECT 
+  trainings.training_id, 
+  date_and_time, 
+  column_number, 
+  COALESCE(U.appointment_id, 0) AS appointment_id, 
+  COALESCE(additional_child_number, -1) AS additional_child_number,
+  (SELECT COUNT(*) FROM appointments WHERE training_id = trainings.training_id) AS appointment_count
 FROM trainings
-LEFT JOIN (SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments WHERE user_id=$1) AS U
+LEFT JOIN (SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments A WHERE A.user_id=$1) AS U
 ON trainings.training_id = U.training_id
 WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
 ORDER BY date_and_time
@@ -252,6 +258,7 @@ type ListTrainingsForSendRow struct {
 	ColumnNumber          int64     `json:"column_number"`
 	AppointmentID         int64     `json:"appointment_id"`
 	AdditionalChildNumber int64     `json:"additional_child_number"`
+	AppointmentCount      int64     `json:"appointment_count"`
 }
 
 func (q *Queries) ListTrainingsForSend(ctx context.Context, arg ListTrainingsForSendParams) ([]ListTrainingsForSendRow, error) {
@@ -269,6 +276,7 @@ func (q *Queries) ListTrainingsForSend(ctx context.Context, arg ListTrainingsFor
 			&i.ColumnNumber,
 			&i.AppointmentID,
 			&i.AdditionalChildNumber,
+			&i.AppointmentCount,
 		); err != nil {
 			return nil, err
 		}

@@ -157,7 +157,7 @@ func AddTrainingToTable(date time.Time, groupType db.GroupTypeEnum) (int64, erro
 	columnLetter := columnNumberToName(startColumn)
 
 	// Форматирование даты, дня недели и времени
-	dateString := date.Format("02.01.") + "Test"
+	dateString := date.Format("02.01.")
 	dayOfWeek := helpers.TranslateWeekDay(date.Format("Mon"))
 	timeString := date.Format("15:04")
 

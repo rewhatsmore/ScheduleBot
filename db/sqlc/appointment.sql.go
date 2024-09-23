@@ -66,6 +66,18 @@ func (q *Queries) GetAppointment(ctx context.Context, appointmentID int64) (Appo
 	return i, err
 }
 
+const getAppointmentCount = `-- name: GetAppointmentCount :one
+SELECT COUNT(*) FROM appointments
+WHERE training_id = $1
+`
+
+func (q *Queries) GetAppointmentCount(ctx context.Context, trainingID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getAppointmentCount, trainingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const listTrainingUsers = `-- name: ListTrainingUsers :many
 SELECT appointment_id, training_id, appointments.user_id, full_name, additional_child_number, appointments.created_at FROM appointments
 JOIN users ON appointments.user_id=users.user_id
