@@ -41,6 +41,7 @@ func listFunctions(queries *db.Queries, userID int64) *Msg {
 		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи ВЗРОСЛЫЕ", listTrainings)},
 		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи ДЕТИ", listChildrenTrainings)},
 		{tgbotapi.NewInlineKeyboardButtonData("Список моих тренировок", myTrainings)},
+		{tgbotapi.NewInlineKeyboardButtonData("Кто уже записан?", trainUsersList)},
 	}
 
 	user, err := queries.GetUser(context.Background(), userID)
