@@ -12,6 +12,7 @@ import (
 	"schedule.sqlc.dev/app/google"
 )
 
+// todo naming
 const makeApp = "ma"
 const cancelApp = "ca"
 const backMenu = "bc"
@@ -21,6 +22,7 @@ const myTrainings = "mt"
 const trainUsersList = "tu"
 const refreshList = "rl"
 const refreshChildrenList = "rc"
+const maxAppointments = 15
 
 // const childApointmentFlag = "ct"
 const backMenuText = "⬅ назад в меню"
@@ -30,7 +32,11 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 	data := callBack.Data[:2]
 	switch data {
 	case makeApp:
-		return handleTrainingAppointment(callBack, bot, queries)
+		msg, err := handleTrainingAppointment(callBack, queries)
+		if err != nil {
+			return err
+		}
+		return msg.UpdateMsg(bot, callBack.Message)
 	case cancelApp:
 		return handleDeleteAppointment(callBack, bot, queries)
 	case listTrainings:
@@ -100,19 +106,20 @@ func sendNewMessageAndDeleteOld(bot *tgbotapi.BotAPI, newMsg *Msg, oldMsg *tgbot
 	return nil
 }
 
-func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, queries *db.Queries) error {
+func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Queries) (*Msg, error) {
+	var msg *Msg
 	callbackText := callBack.Data[2:]
 
 	callBackData := strings.Split(callbackText, ",")
 
 	trainingId, err := strconv.Atoi(callBackData[0])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	additionalChildNumber, err := strconv.Atoi(callBackData[1])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sheetName := "Adult"
@@ -122,49 +129,52 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.B
 
 	columnNumber, err := strconv.Atoi(callBackData[2])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	//TODO: separate method and move below to new file AppointmentService
-	// it should response with boolean, err and does not work with TG events
-	arg := db.CreateAppointmentParams{
-		TrainingID:            int64(trainingId),
-		UserID:                callBack.From.ID,
-		AdditionalChildNumber: int64(additionalChildNumber),
-	}
-
-	_, err = queries.CreateAppointment(context.Background(), arg)
+	usersCount, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 
-	user, err := queries.GetUser(context.Background(), arg.UserID)
-	if err != nil {
-		log.Println(err)
+	if usersCount < maxAppointments {
+		arg := db.CreateAppointmentParams{
+			TrainingID:            int64(trainingId),
+			UserID:                callBack.From.ID,
+			AdditionalChildNumber: int64(additionalChildNumber),
+		}
+
+		_, err = queries.CreateAppointment(context.Background(), arg)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		user, err := queries.GetUser(context.Background(), arg.UserID)
+		if err != nil {
+			log.Println(err)
+		}
+
+		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
-	err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
-	if err != nil {
-		log.Println(err)
-	}
-
-	var msg *Msg
-
-	if arg.AdditionalChildNumber != -1 {
+	if additionalChildNumber != -1 {
 		msg, err = listChildrenTrainingsForUser(queries, callBack.From.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		msg, err = listTrainingsForUser(queries, callBack.From.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	//end TODO
-	return msg.UpdateMsg(bot, callBack.Message)
+	return msg, nil
 }
 
 // СДЕЛАТЬ!!!
@@ -281,7 +291,7 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 			text = "✅  " + text + " (вы записаны)"
 			data = cancelApp + callBackData
 			fmt.Println(data)
-		} else if trainingForSend.AppointmentCount < 15 {
+		} else if trainingForSend.AppointmentCount < maxAppointments {
 			text = "☐  " + text
 		} else {
 			text = "🚫  " + text + " (мест нет)"
