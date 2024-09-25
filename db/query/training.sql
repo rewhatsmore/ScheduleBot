@@ -43,9 +43,15 @@ ORDER BY date_and_time;
 DELETE FROM trainings WHERE training_id = $1;
 
 -- name: ListTrainingsForSend :many
-SELECT trainings.training_id, date_and_time, column_number, COALESCE (U.appointment_id, 0) AS appointment_id, COALESCE (additional_child_number, -1) AS additional_child_number
+SELECT 
+  trainings.training_id, 
+  date_and_time, 
+  column_number, 
+  COALESCE(U.appointment_id, 0) AS appointment_id, 
+  COALESCE(additional_child_number, -1) AS additional_child_number,
+  (SELECT COUNT(*) FROM appointments WHERE training_id = trainings.training_id) AS appointment_count
 FROM trainings
-LEFT JOIN (SELECT * FROM appointments WHERE user_id=$1) AS U
+LEFT JOIN (SELECT * FROM appointments A WHERE A.user_id=$1) AS U
 ON trainings.training_id = U.training_id
 WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
 ORDER BY date_and_time;
