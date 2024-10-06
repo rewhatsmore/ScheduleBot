@@ -28,7 +28,6 @@ func listAdminFunctions(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error {
 	keyboard.InlineKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("Отменить тренировку", adminListTr)},
 		{tgbotapi.NewInlineKeyboardButtonData("Добавить тренировку", adminDaT)},
-		{tgbotapi.NewInlineKeyboardButtonData("Кто уже записан?", trainUsersList)},
 		{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)},
 	}
 

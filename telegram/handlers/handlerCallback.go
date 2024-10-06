@@ -394,7 +394,7 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 // Кто уже записан
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
-	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, adminMenu)}
+	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
 
 	msg := &Msg{

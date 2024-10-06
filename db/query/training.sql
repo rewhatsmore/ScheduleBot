@@ -17,16 +17,31 @@ ORDER BY date_and_time;
 
 -- name: ListChildrenTrainings :many
 SELECT * FROM trainings
-WHERE date_and_time >= date_trunc('week', now()) 
-  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
-AND group_type = 'child'
+WHERE group_type = 'child' AND date_and_time >= 
+    CASE 
+        WHEN EXTRACT(DOW FROM now()) = 0 AND EXTRACT(HOUR FROM now()) >= 15 THEN date_trunc('week', now()) + INTERVAL '1 week'
+        ELSE date_trunc('week', now())
+    END
+  AND date_and_time < 
+    CASE 
+        WHEN EXTRACT(DOW FROM now()) = 0 AND EXTRACT(HOUR FROM now()) >= 15 THEN date_trunc('week', now()) + INTERVAL '2 weeks'
+        ELSE date_trunc('week', now()) + INTERVAL '1 week'
+    END
 ORDER BY date_and_time;
 
 -- name: ListAdultTrainings :many
 SELECT * FROM trainings
-WHERE date_and_time >= date_trunc('week', now()) 
-  AND date_and_time < date_trunc('week', now()) + INTERVAL '2 weeks'
-  AND group_type = 'adult'
+WHERE group_type = 'adult' 
+  AND date_and_time >= 
+    CASE 
+        WHEN EXTRACT(DOW FROM now()) = 0 AND EXTRACT(HOUR FROM now()) >= 15 THEN date_trunc('week', now()) + INTERVAL '1 week'
+        ELSE date_trunc('week', now())
+    END
+  AND date_and_time < 
+    CASE 
+        WHEN EXTRACT(DOW FROM now()) = 0 AND EXTRACT(HOUR FROM now()) >= 15 THEN date_trunc('week', now()) + INTERVAL '2 weeks'
+        ELSE date_trunc('week', now()) + INTERVAL '1 week'
+    END
 ORDER BY date_and_time;
 
 -- name: ListLastWeekTrainings :many
