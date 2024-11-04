@@ -17,7 +17,11 @@ type Msg struct {
 }
 
 func HandleDeleteUser(userID int64, queries *db.Queries) error {
-	err := queries.DeleteUser(context.Background(), userID)
+	user, err := queries.GetUser(context.Background(), userID)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	err = queries.DeleteUser(context.Background(), int32(user.InternalUserID))
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}

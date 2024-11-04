@@ -16,6 +16,7 @@ type Config struct {
 	DBName           string `mapstructure:"DB_NAME"`
 	AdminID          int64  `mapstructure:"ADMIN_ID"`
 	SpreadsheetID    string `mapatructure:"SPREADSHEET_ID"`
+	StageDBName      string `mapstructure:"STAGE_DB_NAME"`
 }
 
 // LoadConfig reads configuration from file or environment variables.

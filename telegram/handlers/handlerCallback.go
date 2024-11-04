@@ -22,6 +22,8 @@ const myTrainings = "mt"
 const trainUsersList = "tu"
 const refreshList = "rl"
 const refreshChildrenList = "rc"
+const adultListTrainingUsers = "tl"
+const childListTrainingUsers = "ut"
 const maxAppointments = 15
 
 // const childApointmentFlag = "ct"
@@ -59,6 +61,29 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 			return err
 		}
 		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
+	case refreshGuestList:
+		internalUserIdString := callBack.Data[2:]
+		internalUserId, err := strconv.Atoi(internalUserIdString)
+		if err != nil {
+			return err
+		}
+		fmt.Println("1. сейчас будем формировать трени для юзера")
+		msg, err := listTrainingsForGuest(queries, int32(internalUserId), callBack)
+		if err != nil {
+			return err
+		}
+		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
+	case refreshChildrenGuestList:
+		internalUserIdString := callBack.Data[2:]
+		internalUserId, err := strconv.Atoi(internalUserIdString)
+		if err != nil {
+			return err
+		}
+		msg, err := listChildrenTrainingsForGuest(queries, int32(internalUserId), callBack)
+		if err != nil {
+			return err
+		}
+		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
 	case listChildrenTrainings:
 		msg, err := listChildrenTrainingsForUser(queries, callBack.From.ID)
 		if err != nil {
@@ -71,7 +96,11 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 	case myTrainings:
 		return listMyTrainings(bot, queries, callBack.Message)
 	case trainUsersList:
+		return typeTrainingListUsersRequest(bot, callBack)
+	case adultListTrainingUsers:
 		return listTrainingUsers(bot, queries, callBack.Message)
+	case childListTrainingUsers:
+		return listChildrenTrainingUsers(bot, queries, callBack.Message)
 	case adminMenu:
 		return listAdminFunctions(bot, callBack.Message)
 	case adminListTr:
@@ -84,6 +113,44 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 		return adminDateAndTimeRequest(callBack.From.ID, bot)
 	case newAdultTraining, newChildTraining:
 		return HandleNewTraining(callBack, queries, bot)
+	case sendMessageToAll:
+		return adminMessageToAllRequest(bot, callBack)
+	case writeUserManually:
+		return adminNewUserNameRequest(bot, callBack)
+	case adminManagingGuests:
+		return adminManageGuests(bot, queries, callBack)
+	case manageGuest:
+		return adminManageGuest(bot, callBack)
+	case adminDeleteGuests:
+		return adminDeleteGuest(bot, queries, callBack)
+	case guestTypeTrainingRequest:
+		return adminTypeGuestTrainingRequest(bot, callBack.Data[2:], callBack.From.ID)
+	case adultGuestListTraining:
+		internalUserIdString := callBack.Data[2:]
+		internalUserId, err := strconv.Atoi(internalUserIdString)
+		if err != nil {
+			return err
+		}
+		msg, err := listTrainingsForGuest(queries, int32(internalUserId), callBack)
+		if err != nil {
+			return err
+		}
+		return msg.UpdateMsg(bot, callBack.Message)
+	case childGuestListTraining:
+		internalUserIdString := callBack.Data[2:]
+		internalUserId, err := strconv.Atoi(internalUserIdString)
+		if err != nil {
+			return err
+		}
+		msg, err := listChildrenTrainingsForGuest(queries, int32(internalUserId), callBack)
+		if err != nil {
+			return err
+		}
+		return msg.UpdateMsg(bot, callBack.Message)
+	case adminMakeGuestAppointment:
+		return handleAdminAppointment(bot, queries, callBack)
+	case adminDeleteGuestAppointment:
+		return handleAdminDeleteAppointment(callBack, bot, queries)
 	default:
 		return nil
 	}
@@ -132,6 +199,11 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 		return nil, err
 	}
 
+	user, err := queries.GetUser(context.Background(), callBack.From.ID)
+	if err != nil {
+		log.Println(err)
+	}
+
 	usersCount, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
 	if err != nil {
 		log.Println(err)
@@ -141,7 +213,7 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 	if usersCount < maxAppointments {
 		arg := db.CreateAppointmentParams{
 			TrainingID:            int64(trainingId),
-			UserID:                callBack.From.ID,
+			InternalUserID:        int64(user.InternalUserID),
 			AdditionalChildNumber: int64(additionalChildNumber),
 		}
 
@@ -149,11 +221,6 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 		if err != nil {
 			log.Println(err)
 			return nil, err
-		}
-
-		user, err := queries.GetUser(context.Background(), arg.UserID)
-		if err != nil {
-			log.Println(err)
 		}
 
 		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
@@ -256,10 +323,10 @@ func listMyTrainings(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotap
 }
 
 // создание отправка тренировок для записи и отмены
-func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
+func listTrainingsForUser(queries *db.Queries, telegramUserID int64) (*Msg, error) {
 	fmt.Println("Мы в методе формирования трень")
 	msg := &Msg{
-		UserID: userID,
+		UserID: telegramUserID,
 		Text:   "Расписание на неделю. Выбери тренировки для записи. Повторное нажатие для отмены.",
 	}
 
@@ -267,9 +334,14 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
 	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, refreshList)}
 
+	user, err := queries.GetUser(context.Background(), telegramUserID)
+	if err != nil {
+		return nil, err
+	}
+
 	arg := db.ListTrainingsForSendParams{
-		UserID:    userID,
-		GroupType: db.GroupTypeEnumAdult,
+		InternalUserID: int64(user.InternalUserID),
+		GroupType:      db.GroupTypeEnumAdult,
 	}
 
 	fmt.Println("Сейчас запрошу трени для юзера")
@@ -312,10 +384,10 @@ func listTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
 }
 
 // создание отправка детских тренировок для записи и отмены
-func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, error) {
+func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*Msg, error) {
 	fmt.Println("Начало создания детских трень")
 	msg := &Msg{
-		UserID: userID,
+		UserID: telegramUserID,
 		Text:   "Расписание дети!!! Поставь галочку для записи. Повторное нажатие для отмены.",
 	}
 
@@ -323,9 +395,14 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
 	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, refreshChildrenList)}
 
+	user, err := queries.GetUser(context.Background(), telegramUserID)
+	if err != nil {
+		return nil, err
+	}
+
 	arg := db.ListTrainingsForSendParams{
-		UserID:    userID,
-		GroupType: db.GroupTypeEnumChild,
+		InternalUserID: int64(user.InternalUserID),
+		GroupType:      db.GroupTypeEnumChild,
 	}
 
 	fmt.Println("Начало получения списка. должно быть 2")
@@ -391,7 +468,24 @@ func listChildrenTrainingsForUser(queries *db.Queries, userID int64) (*Msg, erro
 	return msg, nil
 }
 
-// Кто уже записан
+func typeTrainingListUsersRequest(bot *tgbotapi.BotAPI, callBack *tgbotapi.CallbackQuery) error {
+	msg := &Msg{
+		UserID: callBack.From.ID,
+	}
+
+	keyboard := tgbotapi.InlineKeyboardMarkup{}
+	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
+	adultRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Взрослые", adultListTrainingUsers)}
+	childRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Дети", childListTrainingUsers)}
+
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, adultRow, childRow, backRow)
+	msg.Text = "Посмотреть, кто записан:"
+	msg.ReplyMarkup = keyboard
+
+	return msg.SendMsg(bot)
+}
+
+// Кто уже записан взрослые
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
@@ -409,20 +503,12 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 	}
 	fmt.Println("взрослые есть")
 
-	childTrainings, err := queries.ListChildrenTrainings(context.Background())
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("детские есть")
-
-	if len(adultTrainings) == 0 && len(childTrainings) == 0 {
+	if len(adultTrainings) == 0 {
 		msg.Text = "Пока расписания нет, но скоро обязательно появится!"
 		return msg.UpdateMsg(bot, message)
 	}
 
 	//взрослые
-	msg.Text += "<ins><strong>ВЗРОСЛЫЕ:</strong></ins>\n\n"
 	for _, training := range adultTrainings {
 		text := fmt.Sprintf("<ins>🏅 <strong>%s</strong></ins>\n", CreateTextOfTraining(training.DateAndTime))
 
@@ -440,8 +526,34 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 
 	fmt.Println("Сформирован список взрослых")
 
+	return msg.UpdateMsg(bot, message)
+}
+
+// Кто уже записан дети
+func listChildrenTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
+	keyboard := tgbotapi.InlineKeyboardMarkup{}
+	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
+
+	msg := &Msg{
+		ReplyMarkup: keyboard,
+	}
+
+	fmt.Println("запрашиваем трени")
+
+	childTrainings, err := queries.ListChildrenTrainings(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("детские есть")
+
+	if len(childTrainings) == 0 {
+		msg.Text = "Пока расписания нет, но скоро обязательно появится!"
+		return msg.UpdateMsg(bot, message)
+	}
+
 	//дети
-	msg.Text += "<ins><strong>ДЕТИ:</strong></ins>\n\n"
 	for _, training := range childTrainings {
 		text := fmt.Sprintf("<ins>🏅 <strong>%s</strong></ins>\n", CreateTextOfTraining(training.DateAndTime))
 

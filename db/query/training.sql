@@ -66,8 +66,8 @@ SELECT
   COALESCE(additional_child_number, -1) AS additional_child_number,
   (SELECT COUNT(*) FROM appointments WHERE training_id = trainings.training_id) AS appointment_count
 FROM trainings
-LEFT JOIN (SELECT * FROM appointments A WHERE A.user_id=$1) AS U
+LEFT JOIN (SELECT * FROM appointments A WHERE A.internal_user_id=$1) AS U
 ON trainings.training_id = U.training_id
-WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
+WHERE date_and_time > now() + INTERVAL '4 hours' AND group_type = $2
 ORDER BY date_and_time;
 

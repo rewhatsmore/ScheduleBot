@@ -334,3 +334,159 @@ func HideFilledColumns(sheetName string) error {
 	fmt.Println("Filled columns hidden successfully.")
 	return nil
 }
+
+func FillColumnWithColor(sheetName string, columnNumber int64) error {
+	ctx := context.Background()
+	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("credentials.json"))
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve Sheets client: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	// Получение свойств листа для получения sheetId
+	sheetResp, err := srv.Spreadsheets.Get(spreadsheetId).Fields("sheets(properties(sheetId,title))").Do()
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve sheet properties: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	var sheetId int64
+	for _, sheet := range sheetResp.Sheets {
+		if sheet.Properties.Title == sheetName {
+			sheetId = sheet.Properties.SheetId
+			break
+		}
+	}
+
+	lightRed := &sheets.Color{
+		Red:   1.0,
+		Green: 0.8,
+		Blue:  0.8,
+	}
+
+	// Создание запроса на изменение цвета колонки
+	updateCellsRequest := &sheets.Request{
+		RepeatCell: &sheets.RepeatCellRequest{
+			Range: &sheets.GridRange{
+				SheetId:          sheetId,
+				StartColumnIndex: columnNumber - 1, // Индекс начинается с 0
+				EndColumnIndex:   columnNumber,
+			},
+			Cell: &sheets.CellData{
+				UserEnteredFormat: &sheets.CellFormat{
+					BackgroundColor: lightRed,
+				},
+			},
+			Fields: "userEnteredFormat.backgroundColor",
+		},
+	}
+
+	batchUpdateRequest := &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: []*sheets.Request{updateCellsRequest},
+	}
+
+	_, err = srv.Spreadsheets.BatchUpdate(spreadsheetId, batchUpdateRequest).Do()
+	if err != nil {
+		err = fmt.Errorf("unable to fill column with color: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	fmt.Println("Column filled with color successfully.")
+	return nil
+}
+
+func MarkRowAsDeleted(sheetName string, rowNumber int64) error {
+	ctx := context.Background()
+	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("credentials.json"))
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve Sheets client: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	// Получение свойств листа для получения sheetId
+	sheetResp, err := srv.Spreadsheets.Get(spreadsheetId).Fields("sheets(properties(sheetId,title))").Do()
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve sheet properties: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	var sheetId int64
+	for _, sheet := range sheetResp.Sheets {
+		if sheet.Properties.Title == sheetName {
+			sheetId = sheet.Properties.SheetId
+			break
+		}
+	}
+
+	lightRed := &sheets.Color{
+		Red:   1.0,
+		Green: 0.8,
+		Blue:  0.8,
+	}
+
+	// Создание запроса на изменение цвета строки
+	updateCellsRequest := &sheets.Request{
+		RepeatCell: &sheets.RepeatCellRequest{
+			Range: &sheets.GridRange{
+				SheetId:       sheetId,
+				StartRowIndex: rowNumber - 1, // Индекс начинается с 0
+				EndRowIndex:   rowNumber,
+			},
+			Cell: &sheets.CellData{
+				UserEnteredFormat: &sheets.CellFormat{
+					BackgroundColor: lightRed,
+				},
+			},
+			Fields: "userEnteredFormat.backgroundColor",
+		},
+	}
+
+	// Чтение первой ячейки строки
+	readRange := fmt.Sprintf("%s!A%d", sheetName, rowNumber)
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve data from sheet: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	// Добавление текста "(удален)" к существующему содержимому
+	var existingText string
+	if len(resp.Values) > 0 && len(resp.Values[0]) > 0 {
+		existingText = resp.Values[0][0].(string)
+	}
+	newText := existingText + " (удален)"
+
+	// Запись обновленного текста в первую ячейку строки
+	writeRange := fmt.Sprintf("%s!A%d", sheetName, rowNumber)
+	vr := &sheets.ValueRange{
+		Values: [][]interface{}{{newText}},
+	}
+
+	_, err = srv.Spreadsheets.Values.Update(spreadsheetId, writeRange, vr).ValueInputOption("RAW").Do()
+	if err != nil {
+		err = fmt.Errorf("unable to update data in sheet: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	// Выполнение пакетного обновления
+	batchUpdateRequest := &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: []*sheets.Request{updateCellsRequest},
+	}
+
+	_, err = srv.Spreadsheets.BatchUpdate(spreadsheetId, batchUpdateRequest).Do()
+	if err != nil {
+		err = fmt.Errorf("unable to fill row with color: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	fmt.Println("Row marked as deleted successfully.")
+	return nil
+}

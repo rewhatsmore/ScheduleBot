@@ -55,7 +55,7 @@ func (ns NullGroupTypeEnum) Value() (driver.Value, error) {
 type Appointment struct {
 	AppointmentID         int64     `json:"appointment_id"`
 	TrainingID            int64     `json:"training_id"`
-	UserID                int64     `json:"user_id"`
+	InternalUserID        int64     `json:"internal_user_id"`
 	AdditionalChildNumber int64     `json:"additional_child_number"`
 	CreatedAt             time.Time `json:"created_at"`
 }
@@ -73,9 +73,10 @@ type Training struct {
 
 type User struct {
 	// chat_id from telegram
-	UserID    int64     `json:"user_id"`
-	FullName  string    `json:"full_name"`
-	IsAdmin   bool      `json:"is_admin"`
-	CreatedAt time.Time `json:"created_at"`
-	RowNumber int64     `json:"row_number"`
+	TelegramUserID int64     `json:"telegram_user_id"`
+	FullName       string    `json:"full_name"`
+	IsAdmin        bool      `json:"is_admin"`
+	CreatedAt      time.Time `json:"created_at"`
+	RowNumber      int64     `json:"row_number"`
+	InternalUserID int32     `json:"internal_user_id"`
 }

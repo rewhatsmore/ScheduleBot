@@ -12,27 +12,27 @@ import (
 
 const createAppointment = `-- name: CreateAppointment :one
 INSERT INTO appointments (
-training_id, user_id, additional_child_number
+training_id, internal_user_id, additional_child_number
 ) VALUES (
 $1, $2, $3
-) ON CONFLICT (training_id, user_id)
+) ON CONFLICT (training_id, internal_user_id)
 DO UPDATE SET additional_child_number = EXCLUDED.additional_child_number
-RETURNING appointment_id, training_id, user_id, additional_child_number, created_at
+RETURNING appointment_id, training_id, internal_user_id, additional_child_number, created_at
 `
 
 type CreateAppointmentParams struct {
 	TrainingID            int64 `json:"training_id"`
-	UserID                int64 `json:"user_id"`
+	InternalUserID        int64 `json:"internal_user_id"`
 	AdditionalChildNumber int64 `json:"additional_child_number"`
 }
 
 func (q *Queries) CreateAppointment(ctx context.Context, arg CreateAppointmentParams) (Appointment, error) {
-	row := q.db.QueryRowContext(ctx, createAppointment, arg.TrainingID, arg.UserID, arg.AdditionalChildNumber)
+	row := q.db.QueryRowContext(ctx, createAppointment, arg.TrainingID, arg.InternalUserID, arg.AdditionalChildNumber)
 	var i Appointment
 	err := row.Scan(
 		&i.AppointmentID,
 		&i.TrainingID,
-		&i.UserID,
+		&i.InternalUserID,
 		&i.AdditionalChildNumber,
 		&i.CreatedAt,
 	)
@@ -49,7 +49,7 @@ func (q *Queries) DeleteAppointment(ctx context.Context, appointmentID int64) er
 }
 
 const getAppointment = `-- name: GetAppointment :one
-SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments
+SELECT appointment_id, training_id, internal_user_id, additional_child_number, created_at FROM appointments
 WHERE appointment_id = $1 LIMIT 1
 `
 
@@ -59,7 +59,7 @@ func (q *Queries) GetAppointment(ctx context.Context, appointmentID int64) (Appo
 	err := row.Scan(
 		&i.AppointmentID,
 		&i.TrainingID,
-		&i.UserID,
+		&i.InternalUserID,
 		&i.AdditionalChildNumber,
 		&i.CreatedAt,
 	)
@@ -79,8 +79,8 @@ func (q *Queries) GetAppointmentCount(ctx context.Context, trainingID int64) (in
 }
 
 const listTrainingUsers = `-- name: ListTrainingUsers :many
-SELECT appointment_id, training_id, appointments.user_id, full_name, additional_child_number, appointments.created_at FROM appointments
-JOIN users ON appointments.user_id=users.user_id
+SELECT appointment_id, training_id, appointments.internal_user_id, telegram_user_id, full_name, additional_child_number, appointments.created_at FROM appointments
+JOIN users ON appointments.internal_user_id=users.internal_user_id
 WHERE training_id = $1
 ORDER BY appointments.created_at
 `
@@ -88,7 +88,8 @@ ORDER BY appointments.created_at
 type ListTrainingUsersRow struct {
 	AppointmentID         int64     `json:"appointment_id"`
 	TrainingID            int64     `json:"training_id"`
-	UserID                int64     `json:"user_id"`
+	InternalUserID        int64     `json:"internal_user_id"`
+	TelegramUserID        int64     `json:"telegram_user_id"`
 	FullName              string    `json:"full_name"`
 	AdditionalChildNumber int64     `json:"additional_child_number"`
 	CreatedAt             time.Time `json:"created_at"`
@@ -106,7 +107,8 @@ func (q *Queries) ListTrainingUsers(ctx context.Context, trainingID int64) ([]Li
 		if err := rows.Scan(
 			&i.AppointmentID,
 			&i.TrainingID,
-			&i.UserID,
+			&i.InternalUserID,
+			&i.TelegramUserID,
 			&i.FullName,
 			&i.AdditionalChildNumber,
 			&i.CreatedAt,
@@ -125,9 +127,10 @@ func (q *Queries) ListTrainingUsers(ctx context.Context, trainingID int64) ([]Li
 }
 
 const listUserTrainings = `-- name: ListUserTrainings :many
-SELECT appointment_id, appointments.training_id, additional_child_number, user_id, type, date_and_time, price, trainer  FROM appointments
+SELECT appointment_id, appointments.training_id, additional_child_number, users.telegram_user_id, type, date_and_time, price, trainer  FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
-WHERE user_id = $1 AND date_and_time > now()
+JOIN users ON appointments.internal_user_id=users.internal_user_id
+WHERE telegram_user_id = $1 AND date_and_time > now()
 ORDER BY date_and_time
 `
 
@@ -135,15 +138,15 @@ type ListUserTrainingsRow struct {
 	AppointmentID         int64     `json:"appointment_id"`
 	TrainingID            int64     `json:"training_id"`
 	AdditionalChildNumber int64     `json:"additional_child_number"`
-	UserID                int64     `json:"user_id"`
+	TelegramUserID        int64     `json:"telegram_user_id"`
 	Type                  string    `json:"type"`
 	DateAndTime           time.Time `json:"date_and_time"`
 	Price                 int64     `json:"price"`
 	Trainer               string    `json:"trainer"`
 }
 
-func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUserTrainingsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listUserTrainings, userID)
+func (q *Queries) ListUserTrainings(ctx context.Context, telegramUserID int64) ([]ListUserTrainingsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUserTrainings, telegramUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +158,7 @@ func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUs
 			&i.AppointmentID,
 			&i.TrainingID,
 			&i.AdditionalChildNumber,
-			&i.UserID,
+			&i.TelegramUserID,
 			&i.Type,
 			&i.DateAndTime,
 			&i.Price,
@@ -175,14 +178,16 @@ func (q *Queries) ListUserTrainings(ctx context.Context, userID int64) ([]ListUs
 }
 
 const listUsersForAlert = `-- name: ListUsersForAlert :many
-SELECT user_id, date_and_time FROM appointments
+SELECT appointments.internal_user_id, telegram_user_id, date_and_time FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
-WHERE date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now()
+JOIN users ON appointments.internal_user_id=users.internal_user_id
+WHERE users.telegram_user_id IS NOT NULL AND date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now()
 `
 
 type ListUsersForAlertRow struct {
-	UserID      int64     `json:"user_id"`
-	DateAndTime time.Time `json:"date_and_time"`
+	InternalUserID int64     `json:"internal_user_id"`
+	TelegramUserID int64     `json:"telegram_user_id"`
+	DateAndTime    time.Time `json:"date_and_time"`
 }
 
 func (q *Queries) ListUsersForAlert(ctx context.Context) ([]ListUsersForAlertRow, error) {
@@ -194,7 +199,7 @@ func (q *Queries) ListUsersForAlert(ctx context.Context) ([]ListUsersForAlertRow
 	items := []ListUsersForAlertRow{}
 	for rows.Next() {
 		var i ListUsersForAlertRow
-		if err := rows.Scan(&i.UserID, &i.DateAndTime); err != nil {
+		if err := rows.Scan(&i.InternalUserID, &i.TelegramUserID, &i.DateAndTime); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

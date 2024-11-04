@@ -63,7 +63,7 @@ func trainingNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	for _, userForAlert := range usersForAlert {
 		text := fmt.Sprintf("Напоминалка! Завтра у тебя тренировка: 🥷 %s. Если у тебя изменились планы, пожалуйста, отмени свою запись.", CreateTextOfTraining(userForAlert.DateAndTime))
 		msg := &Msg{
-			UserID:      userForAlert.UserID,
+			UserID:      userForAlert.TelegramUserID,
 			Text:        text,
 			ReplyMarkup: backMenuKeyboard(),
 		}
@@ -137,7 +137,7 @@ func ScheduleNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	}
 
 	for _, user := range users {
-		msg.UserID = user.UserID
+		msg.UserID = user.TelegramUserID
 		err := msg.SendMsg(bot)
 		if err != nil {
 			log.Println(err)

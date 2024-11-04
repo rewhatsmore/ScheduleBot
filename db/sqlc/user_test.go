@@ -11,14 +11,14 @@ import (
 
 func createRandomUser(t *testing.T) User {
 	arg := CreateUserParams{
-		UserID:   random.RandInt(),
-		FullName: random.RandString(),
+		TelegramUserID: random.RandInt(),
+		FullName:       random.RandString(),
 	}
 
 	user, err := testQueries.CreateUser(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
-	require.Equal(t, arg.UserID, user.UserID)
+	require.Equal(t, arg.TelegramUserID, user.TelegramUserID)
 	require.Equal(t, arg.FullName, user.FullName)
 	require.NotZero(t, user.CreatedAt)
 	return user
@@ -31,10 +31,10 @@ func TestCreateUser(t *testing.T) {
 func TestGetUser(t *testing.T) {
 	user1 := createRandomUser(t)
 
-	user2, err := testQueries.GetUser(context.Background(), user1.UserID)
+	user2, err := testQueries.GetUser(context.Background(), user1.TelegramUserID)
 	require.NoError(t, err)
 	require.NotEmpty(t, user2)
-	require.Equal(t, user1.UserID, user2.UserID)
+	require.Equal(t, user1.TelegramUserID, user2.TelegramUserID)
 	require.Equal(t, user1.FullName, user2.FullName)
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
 }

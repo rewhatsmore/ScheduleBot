@@ -13,8 +13,8 @@ const commandStart = "start"
 const commandMenu = "menu"
 const insertFullName = "Для записи на тренировки введи свое имя и фамилию."
 
-func checkUser(userID int64, queries *db.Queries) error {
-	_, err := queries.GetUser(context.Background(), userID)
+func checkUser(telegramUserID int64, queries *db.Queries) error {
+	_, err := queries.GetUser(context.Background(), telegramUserID)
 	return err
 }
 
@@ -35,7 +35,7 @@ func HandleCommand(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 	}
 }
 
-func listFunctions(queries *db.Queries, userID int64) *Msg {
+func listFunctions(queries *db.Queries, telegramUserID int64) *Msg {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	keyboard.InlineKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("Запись/отмена записи ВЗРОСЛЫЕ", listTrainings)},
@@ -44,7 +44,7 @@ func listFunctions(queries *db.Queries, userID int64) *Msg {
 		{tgbotapi.NewInlineKeyboardButtonData("Кто уже записан?", trainUsersList)},
 	}
 
-	user, err := queries.GetUser(context.Background(), userID)
+	user, err := queries.GetUser(context.Background(), telegramUserID)
 	if err != nil {
 		log.Println(err)
 	}
@@ -55,7 +55,7 @@ func listFunctions(queries *db.Queries, userID int64) *Msg {
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, newRow)
 	}
 	return &Msg{
-		UserID:      userID,
+		UserID:      telegramUserID,
 		Text:        "Добро пожаловать в нашу дружную команду! Выбери действие:",
 		ReplyMarkup: keyboard,
 	}

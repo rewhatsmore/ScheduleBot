@@ -11,8 +11,8 @@ import (
 
 func createRandomAppointment(t *testing.T, user User, training Training) Appointment {
 	arg := CreateAppointmentParams{
-		TrainingID: training.TrainingID,
-		UserID:     user.UserID,
+		TrainingID:     training.TrainingID,
+		InternalUserID: int64(user.InternalUserID),
 	}
 
 	appointment, err := testQueries.CreateAppointment(context.Background(), arg)
@@ -21,7 +21,7 @@ func createRandomAppointment(t *testing.T, user User, training Training) Appoint
 	require.NotZero(t, appointment.AppointmentID)
 	require.NotZero(t, appointment.CreatedAt)
 	require.Equal(t, arg.TrainingID, appointment.TrainingID)
-	require.Equal(t, appointment.UserID, arg.UserID)
+	require.Equal(t, appointment.InternalUserID, arg.InternalUserID)
 	return appointment
 }
 
@@ -41,7 +41,7 @@ func TestGetAppointment(t *testing.T) {
 	require.NotEmpty(t, appointment2)
 	require.Equal(t, appointment1.AppointmentID, appointment2.AppointmentID)
 	require.Equal(t, appointment1.TrainingID, appointment2.TrainingID)
-	require.Equal(t, appointment1.UserID, appointment2.UserID)
+	require.Equal(t, appointment1.InternalUserID, appointment2.InternalUserID)
 	require.WithinDuration(t, appointment1.CreatedAt, appointment2.CreatedAt, time.Second)
 }
 
@@ -80,7 +80,7 @@ func TestListTrainingUsers(t *testing.T) {
 	for i, trainingUser := range trainingUsers {
 		require.NotEmpty(t, trainingUser)
 		require.Equal(t, trainingUser.TrainingID, training.TrainingID)
-		require.Equal(t, trainingUser.UserID, appointments[i].UserID)
+		require.Equal(t, trainingUser.InternalUserID, appointments[i].InternalUserID)
 		require.Equal(t, trainingUser.AppointmentID, appointments[i].AppointmentID)
 		require.Equal(t, trainingUser.FullName, users[i].FullName)
 		require.WithinDuration(t, trainingUser.CreatedAt, appointments[i].CreatedAt, time.Second)
@@ -100,13 +100,13 @@ func TestListUserTrainings(t *testing.T) {
 		appointments[i] = appointment
 	}
 
-	userTrainings, err := testQueries.ListUserTrainings(context.Background(), user.UserID)
+	userTrainings, err := testQueries.ListUserTrainings(context.Background(), user.TelegramUserID)
 	require.NoError(t, err)
 	require.NotEmpty(t, userTrainings)
 	require.Equal(t, len(userTrainings), n)
 
 	for _, userTraining := range userTrainings {
 		require.NotEmpty(t, userTraining)
-		require.Equal(t, userTraining.UserID, user.UserID)
+		require.Equal(t, userTraining.TelegramUserID, user.TelegramUserID)
 	}
 }

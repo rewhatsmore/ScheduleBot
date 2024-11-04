@@ -2,6 +2,8 @@ package telegram
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,6 +19,10 @@ func HandleMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 		return adminTypeRequest(message, bot)
 	case insertDateAndTimeAgain:
 		return adminTypeRequest(message, bot)
+	case insertMessageToAll:
+		return adminSendMessageToAll(bot, message)
+	case insertNewUserName:
+		return adminNewUserTypeRequest(bot, message, queries)
 	default:
 		return nil
 	}
@@ -34,9 +40,9 @@ func handleName(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.Que
 	google.AddUserToChildTable(fullName, rowNumber)
 
 	arg := db.CreateUserParams{
-		UserID:    message.From.ID,
-		FullName:  fullName,
-		RowNumber: rowNumber,
+		TelegramUserID: message.From.ID,
+		FullName:       fullName,
+		RowNumber:      rowNumber,
 	}
 	_, err = queries.CreateUser(context.Background(), arg)
 	if err != nil {
@@ -65,6 +71,14 @@ func HandleNewTraining(callback *tgbotapi.CallbackQuery, queries *db.Queries, bo
 	if groupType == newChildTraining {
 		arg.GroupType = db.GroupTypeEnumChild
 	}
+
+	columnNumber, err := google.AddTrainingToTable(arg.DateAndTime, arg.GroupType)
+	if err != nil {
+		fmt.Println(err)
+		log.Println(err)
+	}
+
+	arg.ColumnNumber = int64(columnNumber)
 
 	_, err = queries.CreateTraining(context.Background(), arg)
 	if err != nil {
