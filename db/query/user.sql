@@ -1,8 +1,8 @@
 -- name: CreateUser :one
 INSERT INTO users (
-user_id, full_name, row_number
+telegram_user_id, full_name, row_number
 ) VALUES (
-$1, $2, $3
+ $1, $2, $3
 )
 RETURNING *;
 
@@ -13,10 +13,23 @@ RETURNING *;
 
 -- name: GetUser :one
 SELECT * fROM users
-WHERE user_id = $1;
+WHERE telegram_user_id = $1;
+
+-- name: GetUserByInternalID :one
+SELECT * fROM users
+WHERE internal_user_id = $1;
 
 -- name: ListUsers :many
-SELECT * fROM users;
+SELECT *
+FROM users
+WHERE telegram_user_id <> -1;
 
 -- name: DeleteUser :exec
-DELETE FROM users WHERE user_id = $1;
+DELETE FROM users WHERE internal_user_id = $1;
+
+-- name: ListGuests :many
+SELECT 
+  * 
+FROM users
+WHERE telegram_user_id = -1;
+

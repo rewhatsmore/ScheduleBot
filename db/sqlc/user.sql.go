@@ -11,66 +11,126 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-user_id, full_name, row_number
+telegram_user_id, full_name, row_number
 ) VALUES (
-$1, $2, $3
+ $1, $2, $3
 )
-RETURNING user_id, full_name, is_admin, created_at, row_number
+RETURNING telegram_user_id, full_name, is_admin, created_at, row_number, internal_user_id
 `
 
 type CreateUserParams struct {
-	UserID    int64  `json:"user_id"`
-	FullName  string `json:"full_name"`
-	RowNumber int64  `json:"row_number"`
+	TelegramUserID int64  `json:"telegram_user_id"`
+	FullName       string `json:"full_name"`
+	RowNumber      int64  `json:"row_number"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.UserID, arg.FullName, arg.RowNumber)
+	row := q.db.QueryRowContext(ctx, createUser, arg.TelegramUserID, arg.FullName, arg.RowNumber)
 	var i User
 	err := row.Scan(
-		&i.UserID,
+		&i.TelegramUserID,
 		&i.FullName,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.RowNumber,
+		&i.InternalUserID,
 	)
 	return i, err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users WHERE user_id = $1
+DELETE FROM users WHERE internal_user_id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, userID int64) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, userID)
+func (q *Queries) DeleteUser(ctx context.Context, internalUserID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, internalUserID)
 	return err
 }
 
 const getUser = `-- name: GetUser :one
 
-SELECT user_id, full_name, is_admin, created_at, row_number fROM users
-WHERE user_id = $1
+SELECT telegram_user_id, full_name, is_admin, created_at, row_number, internal_user_id fROM users
+WHERE telegram_user_id = $1
 `
 
 // -- name: UpdateUser :one
 // UPDATE users SET full_name = $2
 // WHERE user_id = $1
 // RETURNING *;
-func (q *Queries) GetUser(ctx context.Context, userID int64) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, userID)
+func (q *Queries) GetUser(ctx context.Context, telegramUserID int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, telegramUserID)
 	var i User
 	err := row.Scan(
-		&i.UserID,
+		&i.TelegramUserID,
 		&i.FullName,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.RowNumber,
+		&i.InternalUserID,
 	)
 	return i, err
 }
 
+const getUserByInternalID = `-- name: GetUserByInternalID :one
+SELECT telegram_user_id, full_name, is_admin, created_at, row_number, internal_user_id fROM users
+WHERE internal_user_id = $1
+`
+
+func (q *Queries) GetUserByInternalID(ctx context.Context, internalUserID int32) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByInternalID, internalUserID)
+	var i User
+	err := row.Scan(
+		&i.TelegramUserID,
+		&i.FullName,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.RowNumber,
+		&i.InternalUserID,
+	)
+	return i, err
+}
+
+const listGuests = `-- name: ListGuests :many
+SELECT 
+  telegram_user_id, full_name, is_admin, created_at, row_number, internal_user_id 
+FROM users
+WHERE telegram_user_id = -1
+`
+
+func (q *Queries) ListGuests(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listGuests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.TelegramUserID,
+			&i.FullName,
+			&i.IsAdmin,
+			&i.CreatedAt,
+			&i.RowNumber,
+			&i.InternalUserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT user_id, full_name, is_admin, created_at, row_number fROM users
+SELECT telegram_user_id, full_name, is_admin, created_at, row_number, internal_user_id
+FROM users
+WHERE telegram_user_id <> -1
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -83,11 +143,12 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	for rows.Next() {
 		var i User
 		if err := rows.Scan(
-			&i.UserID,
+			&i.TelegramUserID,
 			&i.FullName,
 			&i.IsAdmin,
 			&i.CreatedAt,
 			&i.RowNumber,
+			&i.InternalUserID,
 		); err != nil {
 			return nil, err
 		}

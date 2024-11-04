@@ -256,15 +256,15 @@ SELECT
   COALESCE(additional_child_number, -1) AS additional_child_number,
   (SELECT COUNT(*) FROM appointments WHERE training_id = trainings.training_id) AS appointment_count
 FROM trainings
-LEFT JOIN (SELECT appointment_id, training_id, user_id, additional_child_number, created_at FROM appointments A WHERE A.user_id=$1) AS U
+LEFT JOIN (SELECT appointment_id, training_id, internal_user_id, additional_child_number, created_at FROM appointments A WHERE A.internal_user_id=$1) AS U
 ON trainings.training_id = U.training_id
-WHERE date_and_time > now() + INTERVAL '5 hours' AND group_type = $2
+WHERE date_and_time > now() + INTERVAL '4 hours' AND group_type = $2
 ORDER BY date_and_time
 `
 
 type ListTrainingsForSendParams struct {
-	UserID    int64         `json:"user_id"`
-	GroupType GroupTypeEnum `json:"group_type"`
+	InternalUserID int64         `json:"internal_user_id"`
+	GroupType      GroupTypeEnum `json:"group_type"`
 }
 
 type ListTrainingsForSendRow struct {
@@ -277,7 +277,7 @@ type ListTrainingsForSendRow struct {
 }
 
 func (q *Queries) ListTrainingsForSend(ctx context.Context, arg ListTrainingsForSendParams) ([]ListTrainingsForSendRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTrainingsForSend, arg.UserID, arg.GroupType)
+	rows, err := q.db.QueryContext(ctx, listTrainingsForSend, arg.InternalUserID, arg.GroupType)
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,12 @@ migratedown: ## migrate down in db container
 .PHONY: ##
 	createdb dropdb postgres migrateup migratedown
 
+backup: ## backup prod database
+	pg_dump -U $(POSTGRES_USER) -h ${HOST} -p $(POSTGRES_PORT) ${DB_NAME} > backup.sql
+
+sync: ## sync prod database to local
+	psql -U $(POSTGRES_USER) -h ${HOST} -p $(POSTGRES_PORT) ${STAGE_DB_NAME} < backup.sql     
+
 help: ## List of all commands
 	@grep -E '(^[a-zA-Z_0-9-]+:.*?##.*$$)|(^##)' Makefile \
 	| awk 'BEGIN {FS = ":.*?## "}; {printf "${G}%-24s${NC} %s\n", $$1, $$2}' \
