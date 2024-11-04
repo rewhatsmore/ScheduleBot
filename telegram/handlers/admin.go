@@ -273,18 +273,15 @@ func adminNewGuestUserAdd(message *tgbotapi.Message, queries *db.Queries) (int32
 	return user.InternalUserID, nil
 }
 
-func adminSendMessageToAll(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error {
-	// users, err := queries.ListUsers(context.Background())
-	// if err != nil {
-	// 	return errNotificationDb
-	// }
-
-	users := []db.User{
-		{TelegramUserID: 1411894787},
-		{TelegramUserID: 497246178},
+func adminSendMessageToAll(bot *tgbotapi.BotAPI, message *tgbotapi.Message, queries *db.Queries) error {
+	users, err := queries.ListUsers(context.Background())
+	if err != nil {
+		return errNotificationDb
 	}
-
 	for _, user := range users {
+		if !user.IsAdmin {
+			continue
+		}
 		msg := &Msg{
 			UserID: user.TelegramUserID,
 			Text:   message.Text,
