@@ -482,7 +482,7 @@ func typeTrainingListUsersRequest(bot *tgbotapi.BotAPI, callBack *tgbotapi.Callb
 	msg.Text = "Посмотреть, кто записан:"
 	msg.ReplyMarkup = keyboard
 
-	return msg.SendMsg(bot)
+	return msg.UpdateMsg(bot, callBack.Message)
 }
 
 // Кто уже записан взрослые

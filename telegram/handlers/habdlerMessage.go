@@ -20,7 +20,7 @@ func HandleMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI, queries *db.
 	case insertDateAndTimeAgain:
 		return adminTypeRequest(message, bot)
 	case insertMessageToAll:
-		return adminSendMessageToAll(bot, message)
+		return adminSendMessageToAll(bot, message, queries)
 	case insertNewUserName:
 		return adminNewUserTypeRequest(bot, message, queries)
 	default:
