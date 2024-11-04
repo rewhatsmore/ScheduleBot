@@ -479,7 +479,7 @@ func typeTrainingListUsersRequest(bot *tgbotapi.BotAPI, callBack *tgbotapi.Callb
 	childRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Дети", childListTrainingUsers)}
 
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, adultRow, childRow, backRow)
-	msg.Text = "Выбери, какой список ты хочешь посмотреть:"
+	msg.Text = "Посмотреть, кто записан:"
 	msg.ReplyMarkup = keyboard
 
 	return msg.SendMsg(bot)
