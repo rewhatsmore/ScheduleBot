@@ -2,3 +2,4 @@ app.env
 .vscode
 .idea
 credentials.json
+backup.sql

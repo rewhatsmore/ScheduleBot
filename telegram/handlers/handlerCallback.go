@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	db "schedule.sqlc.dev/app/db/sqlc"
@@ -437,6 +438,9 @@ func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*M
 			"☐  " + textOfTraining + " 2 реб"}
 
 		for i, text := range textSlice {
+			if i == 0 && trainingForSend.DateAndTime.Weekday() == time.Sunday && trainingForSend.DateAndTime.Hour() == 13 {
+				continue
+			}
 
 			var row []tgbotapi.InlineKeyboardButton
 			fmt.Printf("%d.%d запись\n", j, i)
