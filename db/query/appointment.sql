@@ -11,6 +11,11 @@ RETURNING *;
 SELECT * FROM appointments
 WHERE appointment_id = $1 LIMIT 1;
 
+-- name: ListAppointments :many
+SELECT *  FROM appointments
+WHERE training_id = $1 
+ORDER BY created_at;
+
 -- name: ListUserTrainings :many
 SELECT appointment_id, appointments.training_id, additional_child_number, users.telegram_user_id, type, date_and_time, price, trainer  FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id

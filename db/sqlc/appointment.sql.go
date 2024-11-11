@@ -78,6 +78,41 @@ func (q *Queries) GetAppointmentCount(ctx context.Context, trainingID int64) (in
 	return count, err
 }
 
+const listAppointments = `-- name: ListAppointments :many
+SELECT appointment_id, training_id, internal_user_id, additional_child_number, created_at  FROM appointments
+WHERE training_id = $1 
+ORDER BY created_at
+`
+
+func (q *Queries) ListAppointments(ctx context.Context, trainingID int64) ([]Appointment, error) {
+	rows, err := q.db.QueryContext(ctx, listAppointments, trainingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Appointment{}
+	for rows.Next() {
+		var i Appointment
+		if err := rows.Scan(
+			&i.AppointmentID,
+			&i.TrainingID,
+			&i.InternalUserID,
+			&i.AdditionalChildNumber,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTrainingUsers = `-- name: ListTrainingUsers :many
 SELECT appointment_id, training_id, appointments.internal_user_id, telegram_user_id, full_name, additional_child_number, appointments.created_at FROM appointments
 JOIN users ON appointments.internal_user_id=users.internal_user_id

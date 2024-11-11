@@ -563,11 +563,6 @@ func handleAdminAppointment(bot *tgbotapi.BotAPI, queries *db.Queries, callBack 
 		return err
 	}
 
-	sheetName := "Adult"
-	if additionalChildNumber != -1 {
-		sheetName = "Child"
-	}
-
 	columnNumber, err := strconv.Atoi(callBackData[2])
 	if err != nil {
 		return err
@@ -603,7 +598,7 @@ func handleAdminAppointment(bot *tgbotapi.BotAPI, queries *db.Queries, callBack 
 			return err
 		}
 
-		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
+		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), additionalChildNumber)
 		if err != nil {
 			log.Println(err)
 		}
