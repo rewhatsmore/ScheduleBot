@@ -186,7 +186,14 @@ func AddTrainingToTable(date time.Time, groupType db.GroupTypeEnum) (int64, erro
 	return int64(startColumn), nil
 }
 
-func AddAppointmentToTable(rowNum, colNum int64, sheetName string) error {
+func AddAppointmentToTable(rowNum, colNum int64, additionalChildNumber int) error {
+	if additionalChildNumber == -1 {
+		return addAppointmentToAdultTable(rowNum, colNum)
+	}
+	return addAppointmentToChildTable(rowNum, colNum, additionalChildNumber)
+}
+
+func addAppointmentToAdultTable(rowNum, colNum int64) error {
 	ctx := context.Background()
 	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("credentials.json"))
 	if err != nil {
@@ -202,7 +209,7 @@ func AddAppointmentToTable(rowNum, colNum int64, sheetName string) error {
 	values := [][]interface{}{{checkmark}}
 
 	// Определение диапазона для записи символа
-	writeRange := fmt.Sprintf("%s!R%dC%d", sheetName, rowNum, colNum)
+	writeRange := fmt.Sprintf("%s!R%dC%d", "Adult", rowNum, colNum)
 
 	vr := &sheets.ValueRange{
 		Values: values,
@@ -217,6 +224,44 @@ func AddAppointmentToTable(rowNum, colNum int64, sheetName string) error {
 	}
 
 	fmt.Println("Checkmark added successfully.")
+	return nil
+}
+
+func addAppointmentToChildTable(rowNum, colNum int64, additionalChildNumber int) error {
+	ctx := context.Background()
+	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("credentials.json"))
+	if err != nil {
+		err = fmt.Errorf("unable to retrieve Sheets client: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	// Символ для добавления
+
+	text := additionalChildNumber
+	if additionalChildNumber == 0 {
+		text = 2
+	}
+
+	// Преобразование символа в формат [][]interface{}
+	values := [][]interface{}{{text}}
+
+	// Определение диапазона для записи символа
+	writeRange := fmt.Sprintf("%s!R%dC%d", "Child", rowNum, colNum)
+
+	vr := &sheets.ValueRange{
+		Values: values,
+	}
+
+	// Запись символа в таблицу
+	_, err = srv.Spreadsheets.Values.Update(spreadsheetId, writeRange, vr).ValueInputOption("RAW").Do()
+	if err != nil {
+		err = fmt.Errorf("unable to update data in sheet: %v", err)
+		log.Println(err)
+		return err
+	}
+
+	fmt.Println("Number added successfully.")
 	return nil
 }
 

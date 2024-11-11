@@ -190,11 +190,6 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 		return nil, err
 	}
 
-	sheetName := "Adult"
-	if additionalChildNumber != -1 {
-		sheetName = "Child"
-	}
-
 	columnNumber, err := strconv.Atoi(callBackData[2])
 	if err != nil {
 		return nil, err
@@ -205,10 +200,21 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 		log.Println(err)
 	}
 
-	usersCount, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
-	if err != nil {
-		log.Println(err)
-		return nil, err
+	var usersCount int
+	if additionalChildNumber != -1 {
+		count, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		usersCount = int(count)
+	} else {
+		count, err := childrenAppointmentCount(queries, int64(trainingId))
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		usersCount = count + 1
 	}
 
 	if usersCount < maxAppointments {
@@ -224,7 +230,7 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 			return nil, err
 		}
 
-		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), sheetName)
+		err = google.AddAppointmentToTable(user.RowNumber, int64(columnNumber), additionalChildNumber)
 		if err != nil {
 			log.Println(err)
 		}
@@ -422,7 +428,11 @@ func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*M
 
 		fmt.Println(j, "-я тренировка, id:", trainingForSend.TrainingID)
 		textOfTraining := CreateTextOfTraining(trainingForSend.DateAndTime)
-		if trainingForSend.AppointmentID == 0 && trainingForSend.AppointmentCount >= 15 {
+		childCount, err := childrenAppointmentCount(queries, trainingForSend.TrainingID)
+		if err != nil {
+			return msg, err
+		}
+		if trainingForSend.AppointmentID == 0 && childCount >= (maxAppointments-1) {
 			text := "🚫  " + textOfTraining + " (мест нет)"
 			data := refreshChildrenList
 			btn := tgbotapi.NewInlineKeyboardButtonData(text, data)
@@ -435,10 +445,12 @@ func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*M
 		textSlice := []string{
 			"☐  " + textOfTraining + " взр + реб",
 			"☐  " + textOfTraining + " 1 реб",
-			"☐  " + textOfTraining + " 2 реб"}
+			"☐  " + textOfTraining + " 2 реб",
+			"☐  " + textOfTraining + " взр + 2 реб",
+		}
 
 		for i, text := range textSlice {
-			if i == 0 && trainingForSend.DateAndTime.Weekday() == time.Sunday && trainingForSend.DateAndTime.Hour() == 13 {
+			if (i == 0 || i == 3) && trainingForSend.DateAndTime.Weekday() == time.Sunday && trainingForSend.DateAndTime.Hour() == 13 {
 				continue
 			}
 
@@ -568,11 +580,30 @@ func listChildrenTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, messag
 		}
 		for i, user := range users {
 
-			textSlice := []string{"взр + реб", "1 реб", "2 реб"}
+			textSlice := []string{"взр + реб", "1 реб", "2 реб", "взр + 2 реб"}
 			userText := fmt.Sprintf("        <em>%d. %s (%s)</em>\n", i+1, user.FullName, textSlice[user.AdditionalChildNumber])
 			msg.Text += userText
 		}
 		msg.Text += "\n"
 	}
 	return msg.UpdateMsg(bot, message)
+}
+
+func childrenAppointmentCount(queries *db.Queries, trainingID int64) (int, error) {
+	appointments, err := queries.ListAppointments(context.Background(), trainingID)
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, appointment := range appointments {
+		if appointment.AdditionalChildNumber == 0 {
+			count += 2
+		} else {
+			count += int(appointment.AdditionalChildNumber)
+		}
+	}
+
+	fmt.Println(count)
+	return count, nil
 }
