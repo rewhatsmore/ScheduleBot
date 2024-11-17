@@ -450,7 +450,7 @@ func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*M
 		}
 
 		for i, text := range textSlice {
-			if (i == 0 || i == 3) && ((trainingForSend.DateAndTime.Weekday() == time.Sunday && trainingForSend.DateAndTime.Hour() == 13) || trainingForSend.DateAndTime.Weekday() == time.Monday) {
+			if (i == 0 || i == 3) && ((trainingForSend.DateAndTime.Weekday() == time.Sunday && trainingForSend.DateAndTime.Hour() == 13) || trainingForSend.DateAndTime.Weekday() == time.Monday || trainingForSend.DateAndTime.Weekday() == time.Wednesday || trainingForSend.DateAndTime.Weekday() == time.Friday) {
 				continue
 			}
 
