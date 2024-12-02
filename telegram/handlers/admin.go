@@ -447,6 +447,9 @@ func listTrainingsForGuest(queries *db.Queries, internalUserID int32, callBack *
 		text := CreateTextOfTraining(trainingForSend.DateAndTime)
 		data := adminMakeGuestAppointment + callBackData
 		if trainingForSend.AppointmentID != 0 {
+			if trainingForSend.DateAndTime.Before(time.Now().Add(4 * time.Hour)) {
+				continue
+			}
 			text = "✅  " + text + " (записан)"
 			data = adminDeleteGuestAppointment + callBackData
 			fmt.Println(data)
@@ -471,7 +474,6 @@ func listTrainingsForGuest(queries *db.Queries, internalUserID int32, callBack *
 
 // создание отправка детских тренировок для записи и отмены
 func listChildrenTrainingsForGuest(queries *db.Queries, internalUserID int32, callBack *tgbotapi.CallbackQuery) (*Msg, error) {
-	fmt.Println("Начало создания детских трень")
 	msg := &Msg{
 		UserID: callBack.From.ID,
 		Text:   "Выбери детские тренировки для записи гостя. Повторное нажатие для отмены.",
@@ -484,8 +486,6 @@ func listChildrenTrainingsForGuest(queries *db.Queries, internalUserID int32, ca
 		InternalUserID: int64(internalUserID),
 		GroupType:      db.GroupTypeEnumChild,
 	}
-
-	fmt.Println("Начало получения списка. должно быть 2")
 
 	trainingsForSend, err := queries.ListTrainingsForSend(context.Background(), arg)
 	if err != nil {
