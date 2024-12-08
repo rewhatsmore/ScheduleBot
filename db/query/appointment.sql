@@ -36,7 +36,7 @@ DELETE FROM appointments WHERE appointment_id = $1;
 SELECT appointments.internal_user_id, telegram_user_id, date_and_time FROM appointments
 JOIN trainings ON appointments.training_id=trainings.training_id
 JOIN users ON appointments.internal_user_id=users.internal_user_id
-WHERE users.telegram_user_id IS NOT NULL AND date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now();
+WHERE users.telegram_user_id <> -1 AND date_part('day', date_and_time)  = date_part('day', now() + INTERVAL '1' DAY) AND date_and_time > now();
 
 -- name: GetAppointmentCount :one
 SELECT COUNT(*) FROM appointments

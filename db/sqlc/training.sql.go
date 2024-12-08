@@ -258,7 +258,7 @@ SELECT
 FROM trainings
 LEFT JOIN (SELECT appointment_id, training_id, internal_user_id, additional_child_number, created_at FROM appointments A WHERE A.internal_user_id=$1) AS U
 ON trainings.training_id = U.training_id
-WHERE date_and_time > now() + INTERVAL '4 hours' AND group_type = $2
+WHERE date_and_time > now() AND group_type = $2
 ORDER BY date_and_time
 `
 
