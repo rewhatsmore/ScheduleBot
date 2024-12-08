@@ -131,6 +131,7 @@ func ScheduleNotification(queries *db.Queries, bot *tgbotapi.BotAPI) error {
 	if err != nil {
 		return errNotificationDb
 	}
+
 	users, err := queries.ListUsers(context.Background())
 	if err != nil {
 		return errNotificationDb

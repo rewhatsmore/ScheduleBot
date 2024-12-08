@@ -399,9 +399,16 @@ func listTrainingsForUser(queries *db.Queries, telegramUserID int64) (*Msg, erro
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
 	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, refreshList)}
 
-	user, err := queries.GetUser(context.Background(), telegramUserID)
-	if err != nil {
-		return nil, err
+	user := db.User{
+		TelegramUserID: telegramUserID,
+		InternalUserID: 0,
+	}
+	var err error
+	if telegramUserID != 0 {
+		user, err = queries.GetUser(context.Background(), telegramUserID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	arg := db.ListTrainingsForSendParams{

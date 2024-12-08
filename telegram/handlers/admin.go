@@ -279,9 +279,6 @@ func adminSendMessageToAll(bot *tgbotapi.BotAPI, message *tgbotapi.Message, quer
 		return errNotificationDb
 	}
 	for _, user := range users {
-		if !user.IsAdmin {
-			continue
-		}
 		msg := &Msg{
 			UserID: user.TelegramUserID,
 			Text:   message.Text,
