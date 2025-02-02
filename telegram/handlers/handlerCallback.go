@@ -28,6 +28,7 @@ const childListTrainingUsers = "ut"
 const typeOfChildrenAppointment = "tc"
 
 const maxAppointments = 15
+const maxWednesdayAppointments = 12
 
 const backMenuText = "⬅ назад в меню"
 const refreshListText = "🔄 обновить список"
@@ -191,7 +192,7 @@ func listChildrenAppointmentOptions(callBack *tgbotapi.CallbackQuery, bot *tgbot
 		{tgbotapi.NewInlineKeyboardButtonData("1 ребёнок", makeApp+fmt.Sprintf("%d,%s", 1, data))},
 	}
 
-	if overallAppointmentCount <= maxAppointments-2 {
+	if overallAppointmentCount <= maxWednesdayAppointments-2 || (training.DateAndTime.Weekday() != time.Wednesday && overallAppointmentCount <= maxAppointments-2) {
 		twoChildButton := tgbotapi.NewInlineKeyboardButtonData("2 ребёнка", makeApp+fmt.Sprintf("%d,%s", 2, data))
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{twoChildButton})
 		if training.DateAndTime.Weekday() == time.Saturday || (training.DateAndTime.Weekday() == time.Sunday && training.DateAndTime.Hour() == 10) {
@@ -438,7 +439,7 @@ func listTrainingsForUser(queries *db.Queries, telegramUserID int64) (*Msg, erro
 			text = "✅  " + text + " (вы записаны)"
 			data = cancelApp + callBackData
 			fmt.Println(data)
-		} else if trainingForSend.AppointmentCount < maxAppointments {
+		} else if trainingForSend.AppointmentCount < maxWednesdayAppointments || (trainingForSend.DateAndTime.Weekday() != time.Wednesday && trainingForSend.AppointmentCount < maxAppointments) {
 			text = "☐  " + text
 		} else {
 			text = "🚫  " + text + " (мест нет)"
@@ -501,7 +502,7 @@ func listChildrenTrainingsForUser(queries *db.Queries, telegramUserID int64) (*M
 			text = "✅  " + text + " (" + childTexts[trainingForSend.AdditionalChildNumber] + ")"
 			data = fmt.Sprintf("%d,%s", trainingForSend.AdditionalChildNumber, data)
 			data = cancelApp + data
-		} else if trainingForSend.AppointmentID == 0 && childCount >= (maxAppointments) {
+		} else if trainingForSend.AppointmentID == 0 && (childCount >= (maxAppointments) || (trainingForSend.DateAndTime.Weekday() == time.Wednesday && childCount >= (maxWednesdayAppointments))) {
 			text = "🚫  " + text + " (мест нет)"
 			data = refreshChildrenList
 		} else {
