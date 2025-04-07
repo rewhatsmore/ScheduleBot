@@ -33,6 +33,7 @@ func (msg *Msg) SendMsg(bot *tgbotapi.BotAPI) error {
 	if msg.ReplyMarkup != nil {
 		message.ReplyMarkup = msg.ReplyMarkup
 	}
+	message.ParseMode = tgbotapi.ModeHTML
 	_, err := bot.Send(message)
 	return err
 }

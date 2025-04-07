@@ -48,7 +48,8 @@ func HandleCallback(callBack *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI, quer
 		if err != nil {
 			return err
 		}
-		return msg.UpdateMsg(bot, callBack.Message)
+		msg.UserID = callBack.Message.Chat.ID
+		return sendNewMessageAndDeleteOld(bot, msg, callBack.Message)
 	case cancelApp:
 		return handleDeleteAppointment(callBack, bot, queries)
 	case listTrainings:
@@ -192,6 +193,7 @@ func listChildrenAppointmentOptions(callBack *tgbotapi.CallbackQuery, bot *tgbot
 		{tgbotapi.NewInlineKeyboardButtonData("1 ребёнок", makeApp+fmt.Sprintf("%d,%s", 1, data))},
 	}
 
+	//less children on wednesday
 	if overallAppointmentCount <= maxWednesdayAppointments-2 || (training.DateAndTime.Weekday() != time.Wednesday && overallAppointmentCount <= maxAppointments-2) {
 		twoChildButton := tgbotapi.NewInlineKeyboardButtonData("2 ребёнка", makeApp+fmt.Sprintf("%d,%s", 2, data))
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{twoChildButton})
@@ -261,19 +263,22 @@ func handleTrainingAppointment(callBack *tgbotapi.CallbackQuery, queries *db.Que
 
 	var usersCount int
 	if additionalChildNumber != -1 {
-		count, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		usersCount = int(count)
-	} else {
 		count, err := childrenAppointmentCount(queries, int64(trainingId))
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		usersCount = count + 1
+	} else {
+		count, err := queries.GetAppointmentCount(context.Background(), int64(trainingId))
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		if count < 0 {
+			fmt.Println("count is less than 0")
+		}
+		usersCount = int(count)
 	}
 
 	if usersCount < maxAppointments {
@@ -439,7 +444,7 @@ func listTrainingsForUser(queries *db.Queries, telegramUserID int64) (*Msg, erro
 			text = "✅  " + text + " (вы записаны)"
 			data = cancelApp + callBackData
 			fmt.Println(data)
-		} else if trainingForSend.AppointmentCount < maxWednesdayAppointments || (trainingForSend.DateAndTime.Weekday() != time.Wednesday && trainingForSend.AppointmentCount < maxAppointments) {
+		} else if trainingForSend.AppointmentCount < maxAppointments {
 			text = "☐  " + text
 		} else {
 			text = "🚫  " + text + " (мест нет)"
@@ -546,10 +551,12 @@ func typeTrainingListUsersRequest(bot *tgbotapi.BotAPI, callBack *tgbotapi.Callb
 func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
+	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, adultListTrainingUsers)}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, refreshRow, backRow)
 
 	msg := &Msg{
 		ReplyMarkup: keyboard,
+		UserID:      message.Chat.ID,
 	}
 
 	fmt.Println("запрашиваем трени")
@@ -583,17 +590,19 @@ func listTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbot
 
 	fmt.Println("Сформирован список взрослых")
 
-	return msg.UpdateMsg(bot, message)
+	return sendNewMessageAndDeleteOld(bot, msg, message)
 }
 
 // Кто уже записан дети
 func listChildrenTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, message *tgbotapi.Message) error {
 	keyboard := tgbotapi.InlineKeyboardMarkup{}
 	backRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(backMenuText, backMenu)}
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, backRow)
+	refreshRow := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(refreshListText, childListTrainingUsers)}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, refreshRow, backRow)
 
 	msg := &Msg{
 		ReplyMarkup: keyboard,
+		UserID:      message.Chat.ID,
 	}
 
 	fmt.Println("запрашиваем трени")
@@ -625,7 +634,7 @@ func listChildrenTrainingUsers(bot *tgbotapi.BotAPI, queries *db.Queries, messag
 		}
 		msg.Text += "\n"
 	}
-	return msg.UpdateMsg(bot, message)
+	return sendNewMessageAndDeleteOld(bot, msg, message)
 }
 
 func childrenAppointmentCount(queries *db.Queries, trainingID int64) (int, error) {
